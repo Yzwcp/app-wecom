@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>施工詳情</title>
+    <link rel="stylesheet" href="/css/style.css" />
+    <script src="/js/html2canvas.min.js"></script>
+    <script src="/js/jspdf.umd.min.js"></script>
+    <style>
+      .hero-company {
+        background: linear-gradient(135deg, #1a1a2e 0%, #2d2d44 100%);
+        color: #fff;
+        padding: 28px 20px;
+        text-align: center;
+      }
+      .hero-logo {
+        width: 52px;
+        height: 52px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 1);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 22px;
+        margin-bottom: 10px;
+        overflow: hidden;
+        position: relative;
+      }
+      .hero-logo img {
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
+      }
+      .hero-logo .logo-text {
+        color: #fff;
+        line-height: 1;
+      }
+      .hero-company-name {
+        font-size: 15px;
+        font-weight: 600;
+        margin-bottom: 4px;
+      }
+      .hero-company-phone {
+        font-size: 13px;
+        opacity: 0.65;
+      }
+
+      .site-title-card {
+        background: var(--c-white);
+        margin: 12px 16px;
+        border-radius: var(--r);
+        padding: 18px;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--c-border);
+      }
+      .site-title-card h2 {
+        font-size: 18px;
+        font-weight: 700;
+        margin-bottom: 6px;
+      }
+      .site-title-card .loc {
+        font-size: 13px;
+        color: var(--c-text2);
+        margin-bottom: 8px;
+      }
+
+      .hint-box {
+        margin: 8px 16px;
+        padding: 10px 14px;
+        background: #fffbf0;
+        border: 1px solid #fde68a;
+        border-radius: 10px;
+        font-size: 12px;
+        color: #92400e;
+        line-height: 1.5;
+      }
+      .detail-module-images.two-col {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .mod-loc-tag {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 500;
+        background: var(--c-bg);
+        color: var(--c-text2);
+      }
+      .detail-module-images.two-col {
+        display: flex;
+        flex-wrap: wrap; /* 讓多張圖片能自動換行 */
+        gap: 12px; /* 圖片之間的間距 */
+        padding: 10px 0;
+        justify-content: flex-start; /* 靠左對齊，或改為 center 居中 */
+      }
+
+      /* 確保圖片維持本身比例，且最大寬度不超過容器 */
+      .detail-module-images.two-col img {
+        max-width: 45%; /* 防止圖片超出螢幕寬度 */
+        height: auto !important; /* 強制維持原始寬高比，防止被其他樣式拉伸 */
+        object-fit: contain; /* 確保圖片內容完整顯示 */
+        border-radius: 8px; /* 選擇性：讓圖片邊角圓滑，更好看 */
+
+        /* 如果您希望在手機上多張圖時不要擠在一起，可以設定一個預估的顯示寬度，例如： */
+        /* width: calc(50% - 6px); 如果想維持兩欄但按比例縮放，可取消此行註解 */
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <div class="header-left">
+        <a href="/" class="btn-back">&larr;</a>
+        <h1>施工詳情</h1>
+      </div>
+      <a id="btnEdit" class="btn btn-sm btn-outline">編輯</a>
+    </div>
+
+    <div
+      id="screenshotTarget"
+      style="background: var(--c-white); min-height: 100vh"
+    >
+      <div class="hero-company">
+        <div class="hero-logo">
+          <img
+            src="/uploads/logo.png"
+            alt="logo"
+            onerror="this.style.display = 'none'"
+            crossorigin="anonymous"
+          />
+          <span class="logo-text">工</span>
+        </div>
+        <div class="hero-company-name">安築設計</div>
+        <div class="hero-company-phone">電話 65522157</div>
+      </div>
+      <div id="loadingView" class="loading" style="padding: 60px 0">
+        <div class="spinner"></div>
+        載入中...
+      </div>
+      <div id="detailContent" class="detail-wrap" style="display: none"></div>
+    </div>
+
+    <div class="bottom-bar" id="bottomBar" style="display: none">
+      <button class="btn btn-primary" id="btnDownload">
+        產生報告並下載PDF
+      </button>
+    </div>
+
+    <div
+      id="screenshotOverlay"
+      class="screenshot-overlay"
+      style="display: none"
+    >
+      <div
+        class="spinner"
+        style="
+          border-color: rgba(255, 255, 255, 0.25);
+          border-top-color: #fff;
+          width: 28px;
+          height: 28px;
+        "
+      ></div>
+      <div class="message">正在產生長圖...</div>
+    </div>
+    <a id="downloadLink" style="display: none"></a>
+
+    <script src="/js/common.js"></script>
+    <script>
+      const siteId = getQueryParam("id");
+      let siteData = null;
+
+      document.addEventListener("DOMContentLoaded", async () => {
+        if (!siteId) {
+          showToast("缺少 ID");
+          setTimeout(() => {
+            window.location = "/";
+          }, 1000);
+          return;
+        }
+        await loadDetail();
+        bindEvents();
+      });
+
+      async function loadDetail() {
+        const res = await apiGet(`/sites/${siteId}`);
+        if (res.code !== 0) {
+          showToast("載入失敗");
+          return;
+        }
+        siteData = res.data;
+        document.getElementById("loadingView").style.display = "none";
+        render();
+      }
+
+      function render() {
+        const s = siteData;
+        const isDone = s.status === "completed";
+
+        let modsHtml = "";
+        (s.modules || []).forEach((mod, i) => {
+          const imgs =
+            (mod.images || []).length > 0
+              ? `<div class="detail-module-images two-col">${mod.images
+                  .map(
+                    (url) =>
+                      `<img src="${url}" crossorigin="anonymous" onerror="this.style.display='none'" loading="lazy">`,
+                  )
+                  .join("")}</div>`
+              : "";
+          modsHtml += `
+      <div class="detail-module">
+        <div class="detail-module-header">
+          <div class="detail-module-icon"><img src="/shandian.png" style="width:30px;height:30px;" onerror="this.style.display='none'"></div>
+          <div class="detail-module-info">
+            <h4>${escH(mod.name || "模組 " + (i + 1))}</h4>
+          </div>
+        </div>
+        ${imgs}
+      </div>`;
+        });
+
+        const remarkHtml = s.remark
+          ? `<div class="detail-info-card"><div style="font-size:13px;color:var(--c-text3);margin-bottom:4px;">備註</div><div style="font-size:14px;white-space:pre-wrap;">${escH(s.remark)}</div></div>`
+          : "";
+
+        document.getElementById("detailContent").innerHTML = `
+    <div class="site-title-card">
+      <h2>${escH(s.title)}</h2>
+      <div class="loc">${escH(s.location)}</div>
+      <span class="badge badge-${s.status}">${isDone ? "已完工" : "進行中"}</span>
+    </div>
+
+    <div class="hint-box">
+      本報告供日後維修時定位水電走線之用，請妥善儲存。
+    </div>
+
+    <div class="detail-info-card">
+      <div class="detail-info-row"><span class="detail-info-label">記錄日期</span><span class="detail-info-value">${formatDate(s.record_date)}</span></div>
+    </div>
+
+    ${remarkHtml}
+
+    ${(s.modules || []).length > 0 ? `<div style="padding:8px 16px 0;"><div class="form-section-title">水電隱蔽工程生成報告</div></div>` : ""}
+    ${modsHtml}
+
+    <div style="text-align:center;padding:32px 20px 40px;">
+      <div style="display:inline-flex;align-items:center;gap:10px;margin-bottom:12px;">
+        <img src="/uploads/logo.png" style="width:36px;height:36px;border-radius:8px;object-fit:contain;" onerror="this.style.display='none'" crossorigin="anonymous">
+        <div style="text-align:left;line-height:1.3;">
+          <span style="font-size:15px;font-weight:700;color:var(--c-text1);">${escH(s.company_name || "安築設計")}</span>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--c-text2);margin-bottom:6px;">&copy; ${new Date().getFullYear()} ${escH(s.company_name || "安築設計")} 版權所有</div>
+      <div style="font-size:11px;color:var(--c-text3);">此報告僅供參考</div>
+    </div>
+  `;
+        document.getElementById("detailContent").style.display = "block";
+        document.getElementById("bottomBar").style.display = "flex";
+      }
+
+      function locLabel(loc) {
+        const map = {
+          公共浴室: "浴",
+          套房浴室: "浴",
+          客廳: "廳",
+          廚房: "廚",
+          露台: "台",
+          主人房: "主",
+          工人房: "工",
+          玄關: "關",
+        };
+        return map[loc] || loc ? (loc.length > 1 ? loc.slice(0, 1) : loc) : "—";
+      }
+      function escH(s) {
+        const d = document.createElement("div");
+        d.textContent = s || "";
+        return d.innerHTML;
+      }
+
+      function bindEvents() {
+        document.getElementById("btnEdit").onclick = () => {
+          window.location = `/form.html?id=${siteId}`;
+        };
+        document.getElementById("btnDownload").onclick = genAndDownload;
+      }
+
+      /* ===== 長圖生成 —— 修復 OSS 跨域圖片空白 ===== */
+      async function genAndDownload() {
+        const btn = document.getElementById("btnDownload");
+        const overlay = document.getElementById("screenshotOverlay");
+        btn.disabled = true;
+        btn.textContent = "產生中...";
+        overlay.style.display = "flex";
+
+        try {
+          // 1. 確保所有圖片都帶上 crossorigin 並加載完成
+          const allImgs = document.querySelectorAll("#screenshotTarget img");
+          allImgs.forEach((img) => {
+            if (!img.hasAttribute("crossorigin"))
+              img.setAttribute("crossorigin", "anonymous");
+          });
+
+          // 2. 等待所有圖片加載（包括 OSS 跨域圖片）
+          await Promise.all(
+            Array.from(allImgs).map((img) => {
+              if (img.complete && img.naturalWidth > 0)
+                return Promise.resolve();
+              return new Promise((resolve) => {
+                const timer = setTimeout(() => resolve(), 8000);
+                img.onload = () => {
+                  clearTimeout(timer);
+                  resolve();
+                };
+                img.onerror = () => {
+                  clearTimeout(timer);
+                  resolve();
+                };
+                // 如果圖片已經加載但 naturalWidth 為 0，強制重載
+                if (img.complete && img.naturalWidth === 0) {
+                  const src = img.src;
+                  img.src = "";
+                  img.src = src;
+                }
+              });
+            }),
+          );
+
+          // 3. 額外等待一幀確保渲染完成
+          await new Promise((r) =>
+            requestAnimationFrame(() => requestAnimationFrame(r)),
+          );
+
+          // 4. 修復 object-fit：html2canvas 不支援此屬性，用 canvas 預渲染替代
+          // 注意：canvas 內部解析度需與 html2canvas scale 匹配，避免模糊
+          const CANVAS_SCALE = 3;
+          const imgReplacements = [];
+          document
+            .querySelectorAll(".detail-module-images img")
+            .forEach((img) => {
+              const rect = img.getBoundingClientRect();
+              if (rect.width === 0 || rect.height === 0) return;
+              const cvs = document.createElement("canvas");
+              cvs.width = rect.width * CANVAS_SCALE;
+              cvs.height = rect.height * CANVAS_SCALE;
+              cvs.className = img.className;
+              cvs.style.cssText = img.style.cssText;
+              cvs.style.width = rect.width + "px";
+              cvs.style.height = rect.height + "px";
+              cvs.style.objectFit = "none"; // canvas 不需要 object-fit
+              // 以 contain 方式繪製圖片（高解析度）
+              const ctx = cvs.getContext("2d");
+              ctx.scale(CANVAS_SCALE, CANVAS_SCALE);
+              const iA = img.naturalWidth / img.naturalHeight;
+              const bA = rect.width / rect.height;
+              let sx, sy, sw, sh;
+              if (iA > bA) {
+                sw = rect.width;
+                sh = rect.width / iA;
+                sx = 0;
+                sy = (rect.height - sh) / 2;
+              } else {
+                sh = rect.height;
+                sw = rect.height * iA;
+                sx = (rect.width - sw) / 2;
+                sy = 0;
+              }
+              ctx.drawImage(img, sx, sy, sw, sh);
+              img.style.display = "none";
+              img.parentNode.insertBefore(cvs, img);
+              imgReplacements.push({ img, cvs });
+            });
+
+          // 5. 生成 canvas
+          const canvas = await html2canvas(
+            document.getElementById("screenshotTarget"),
+            {
+              backgroundColor: "#ffffff",
+              scale: CANVAS_SCALE,
+              useCORS: true,
+              allowTaint: false,
+              logging: false,
+              scrollY: -window.scrollY,
+              windowWidth: document.documentElement.scrollWidth,
+              windowHeight: document.documentElement.scrollHeight,
+            },
+          );
+
+          // 6. 還原被替換的圖片
+          imgReplacements.forEach(({ img, cvs }) => {
+            cvs.parentNode.removeChild(cvs);
+            img.style.display = "";
+          });
+
+          // 7. 生成 PDF
+          const imgData = canvas.toDataURL("image/png", 1.0);
+          const { jsPDF } = window.jspdf;
+          const imgWidth = canvas.width;
+          const imgHeight = canvas.height;
+
+          // A4 尺寸 (mm)
+          const pdfW = 210;
+          const pdfH = 297;
+          const ratio = Math.min(pdfW / imgWidth, pdfH / imgHeight);
+          const scaledW = imgWidth * ratio;
+          const scaledH = imgHeight * ratio;
+
+          const pdf = new jsPDF({
+            orientation: scaledH > pdfW ? "portrait" : "landscape",
+            unit: "mm",
+            format: [scaledW, scaledH],
+          });
+          pdf.addImage(imgData, "PNG", 0, 0, scaledW, scaledH);
+          overlay.style.display = "none";
+
+          pdf.save(`施工_${siteData.title}_${siteData.record_date}.pdf`);
+          showToast("PDF 已下載");
+        } catch (e) {
+          console.error(e);
+          overlay.style.display = "none";
+          showToast("產生失敗，請檢查網路後重試");
+        }
+
+        btn.disabled = false;
+        btn.textContent = "產生報告並下載PDF";
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,149 @@
+@import '@/uni_modules/lime-style/index.scss';
+$use-css-var: true;
+
+$navbar: #{$prefix}-navbar;
+
+$navbar-color: create-var(navbar-color, $text-color-1);
+$navbar-bg-color: create-var(navbar-bg-color, $bg-color-container);
+$navbar-height: create-var(navbar-height, 48px);
+$navbar-z-index: create-var(navbar-z-index, 998);
+// 默认右上角胶囊按钮宽度，组件会在初始化时尝试自动获取胶囊按钮宽度并覆写该值
+// $navbar-right: create-var(navbar-right, 95px);
+$navbar-right: create-var(navbar-right, 12px);
+$navbar-left: create-var(navbar-left, 12px);
+// 导航栏顶部间距，组件会在初始化时尝试取右侧系统胶囊位置进行覆盖
+$navbar-padding-top: create-var(navbar-padding-top, 0px);
+
+
+$navbar-title-font-size: create-var(navbar-title-font-size, 18px);
+$navbar-title-font-weight: create-var(navbar-title-font-weight, 600);
+$navbar-left-arrow-size: create-var(navbar-left-arrow-size, 24px);
+
+// capsule
+$navbar-capsule-border-color: create-var(navbar-capsule-border-color, $border-color-1);
+$navbar-capsule-border-radius: create-var(navbar-capsule-border-radius, 16px);
+$navbar-capsule-width: create-var(navbar-capsule-width, 88px);
+$navbar-capsule-height: create-var(navbar-capsule-height, 32px);
+
+
+
+.#{$navbar} {
+	overflow: visible;
+	&__content {
+		/* #ifndef UNI-APP-X && APP */
+		display: flex;
+		color: $navbar-color;
+		/* #endif */
+		flex-direction: row;
+		justify-content: space-between;
+		position: relative;
+		z-index: 1;
+		height: $navbar-height;
+		padding-right: $navbar-right;
+		padding-left: $navbar-left;
+		padding-top: $navbar-padding-top;
+		background-color: $navbar-bg-color;
+		box-sizing: content-box;
+	}
+	&__placeholder {
+	    height: $navbar-height;
+	    padding-top: $navbar-padding-top;
+	    position: relative;
+	    visibility: hidden;
+		box-sizing: content-box;
+	}
+	&__left,&__right {
+		position: relative;
+		align-items: center;
+		flex-direction: row;
+		box-sizing: border-box;
+		
+		/* #ifdef MP */
+		& > view {
+			display: flex;
+			flex-direction: row;
+		}
+		/* #endif */
+	}
+	&__left {
+		display: flex;
+		flex: 1;
+		&-arrow {
+		    font-size: $navbar-left-arrow-size;
+			color: $navbar-color;
+		}
+	}
+	&__right {
+		display: flex;
+	}
+	&__btn {
+		display: flex;
+		align-items: center;
+	}
+	&__center {
+		/* #ifndef UNI-APP-X && APP */
+		display: flex;
+		line-height: $navbar-height;
+		text-align: center;
+		/* #endif */
+		
+		
+		
+		position: absolute;
+		left: 50%;
+		// right: 0;
+		bottom: 0;
+		height: $navbar-height;
+		transform: translateX(-50%);
+		flex: 1;
+		align-items: center;
+		justify-content: center;
+		z-index: 1;
+		&-title {
+		    font-size: $navbar-title-font-size;
+		    text-overflow: ellipsis;
+		    white-space: nowrap;
+		    overflow: hidden;
+			color: $navbar-color;
+		    // font-weight: $navbar-title-font-weight;
+		}
+	}
+	
+	 &__capsule {
+		display: flex;
+	    box-sizing: border-box;
+		flex-direction: row;
+		
+	    width: $navbar-capsule-width;
+	    height: $navbar-capsule-height;
+	    align-items: center;
+		
+		border-width: 0.6px;
+		border-style: solid;
+		border-color: $navbar-capsule-border-color;
+		border-radius: 99px;
+	    // &::before {
+	    //   content: '';
+	    //   position: absolute;
+	    //   z-index: -1;
+	    //   top: 0;
+	    //   left: 0;
+	    //   width: 200%;
+	    //   height: 200%;
+	    //   transform: scale(0.5);
+	    //   transform-origin: 0 0;
+	    //   box-sizing: border-box;
+	    //   border-radius: calc($navbar-capsule-border-radius * 2);
+	    //   border: 2rpx solid $navbar-capsule-border-color;
+	    // }
+	
+	}
+	
+	&--fixed {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		z-index: $navbar-z-index
+	}
+}
