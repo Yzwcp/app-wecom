@@ -1,0 +1,226 @@
+<template>
+	<view class="l-navbar__placeholder" :style="[styles, placeholderStyle]" ref="placeholderRef" v-if="placeholder && fixed"></view>
+	<view class="l-navbar" :style="[styles, rootStyle]" :class="classes">
+		<view class="l-navbar__content" ref="contentRef" :style="contentStyle">
+			<view ref="leftRef" class="l-navbar__left" v-if="leftArrow || $slots['capsule'] != null || $slots['left'] != null">
+				<view v-if="leftArrow" class="l-navbar__btn" @tap="goBack" aria-role="button" aria-label="返回">
+					<l-icon name="chevron-left" class="l-navbar__left-arrow" size="24px" :color="color" />
+				</view>
+				<slot name="left"></slot>
+				<view class="l-navbar__capsule" v-if="$slots['capsule'] != null">
+					<slot name="capsule" />
+				</view>
+			</view>
+			<view ref="centerRef" class="l-navbar__center" v-if="title != null || $slots['title'] != null">
+				<slot name="title">
+					<text v-if="title != null" class="l-navbar__center-title" :style="[color!=null?'color:'+color:'']">{{titleContent}}</text>
+				</slot>
+			</view>
+			<view ref="rightRef" class="l-navbar__right"  v-if="$slots['right'] != null">
+				<slot name="right"></slot>
+			</view>
+		</view>
+		<slot name="extra" :size="size"></slot>
+	</view>
+</template>
+<script lang="uts" setup>
+	/**
+	 * Navbar 导航栏组件
+	 * 
+	 * @description 用于页面顶部导航栏，支持自定义标题、返回按钮和状态栏适配 
+	 * <br> 插件类型： LNavbarComponentPublicInstance
+	 * @tutorial https://ext.dcloud.net.cn/plugin?name=lime-navbar
+	 * 
+	 * @property {boolean} placeholder 是否生成占位元素（用于固定定位时防遮挡）
+	 * @property {boolean} safeAreaInsetTop 适配顶部安全区域（默认true）
+	 * @property {number} delta 返回页面数（例：2表示上两页）
+	 * @property {boolean} animation 切换页面时启用动画（默认true）
+	 * @property {boolean} fixed 是否固定定位在顶部（默认false）
+	 * @property {boolean} leftArrow 是否显示左侧返回箭头（默认true）
+	 * @property {string} title 标题文本（支持插槽）
+	 * @property {number} titleMaxLength 标题最大字符数（超出显示...）
+	 * @property {number} zIndex 层级（默认：980）
+	 * @property {string} bgColor 背景色（支持CSS颜色值）
+	 * @property {string} color 文字颜色（影响标题/图标）
+	 * @event {Function} back 点击返回触发
+	 * @event {Function} fail 返回失败触发
+	 * @event {Function} complete 返回触发
+	 * @event {Function} success 返回成功触发
+	 * @event {Function} clickLeft 点击左侧触发
+	 * @event {Function} size 返回节点尺寸信息事件
+	 */
+	import { NavbarProps, NavbarSize } from './type';
+	import { getBounds, truncateTitle } from './utils';
+	
+	const slots = defineSlots<{
+		capsule(props : {  }) : any,
+		left(props : { }) : any,
+		title(props : { }) : any,
+		right(props : { }) : any,
+		extra(props : { size : NavbarSize }) : any
+	  }>()
+	const emit = defineEmits(["back", "fail", "complete", "success", "click-left", "size"])
+	const props = withDefaults(defineProps<NavbarProps>(), {
+		placeholder: false,
+		safeAreaInsetTop: false,
+		delta: 1,
+		animation: true,
+		fixed: true,
+		leftArrow: false
+	})
+	const bounds = ref(getBounds());
+	const contentRef = ref<UniElement|null>(null);
+	const placeholderRef = ref<UniElement|null>(null);
+	const leftRef = ref<UniElement|null>(null);
+	const centerRef = ref<UniElement|null>(null);
+	const rightRef = ref<UniElement|null>(null);
+	
+	const classes = computed(():Map<string, any>=>{
+		const cls = new Map<string, any>();
+		cls.set('l-navbar--fixed', props.fixed)
+		return cls
+	})
+	const rootStyle = computed(():Map<string, any>=>{
+		const style = new Map<string, any>()
+		if(props.zIndex != null) {
+			style.set('--l-navbar-z-index', props.zIndex!)
+		}
+		if(props.bgColor != null) {
+			style.set('--l-navbar-bg-color', props.bgColor!)
+		}
+		return style
+	})
+	
+	const contentStyle = computed(():Map<string, any>=>{
+		const style = new Map<string, any>()
+		// if(props.bgColor != null) {
+		// 	style.set('background', props.bgColor!)
+		// }
+		// #ifdef APP || WEB
+		if(props.fixed) {
+			const top = (props.safeAreaInsetTop ? bounds.value.statusBarHeight : 0)
+			if(top > 0){
+				style.set('padding-top', top + 'px')
+			}
+			if(bounds.value.capsule.width > 0) {
+				style.set('padding-right', bounds.value.paddingRight + 'px')
+			}
+		}
+		// #endif
+		return style
+	})
+	
+	// #ifdef MP
+	// #endif
+	
+	
+	const size = ref<NavbarSize>({
+		height:0,
+		statusBarHeight: 0,
+		navbarHeight: 0,
+		capsuleHeight: 0,
+		capsuleWidth: 0,
+		paddingLeft: 0,
+		paddingRight: 0,
+		isFixed: true
+	})
+	const styles = computed(():Map<string, any>=>{
+		const style = new Map<string, any>()
+		// #ifdef MP
+		if(bounds.value.capsule.hasCapsule) {
+			if(props.safeAreaInsetTop) {
+				style.set('--l-navbar-padding-top', bounds.value.statusBarHeight + 'px')
+			}
+			style.set('--l-navbar-height', bounds.value.navbarHeight + 'px');
+			style.set('--l-navbar-capsule-height', bounds.value.capsule.height + 'px');
+			style.set('--l-navbar-capsule-width',  bounds.value.capsule.width + 'px');
+			style.set('--l-navbar-left',  bounds.value.paddingLeft + 'px');
+			style.set('--l-navbar-right', bounds.value.paddingRight + 'px');
+		}
+		// #endif
+		return style
+	})
+	
+	const placeholderStyle = computed(()=>{
+		const style = new Map<string, any>()
+		// #ifdef APP || WEB
+		const top = (props.safeAreaInsetTop ? bounds.value.statusBarHeight : 0)
+		style.set('height', bounds.value.navbarHeight + top + 'px')
+		// #endif
+		return style
+	})
+	
+	const titleContent = computed((): string =>{
+		return truncateTitle(props.title, props.titleMaxLength ?? 999)
+	})
+	
+	
+	const goBack = () => {
+		emit('click-left')
+		const delta = props.delta;
+		if (delta > 0) {
+			emit("back");
+			uni.navigateBack({
+				delta: delta,
+				fail: (e) => {
+					emit("fail", e);
+				},
+				complete: (e) => {
+					emit("complete", e);
+				},
+				success: (e) => {
+					emit("success", e);
+				},
+			});
+		}
+	}
+	// 提取获取尺寸的逻辑到单独函数
+	const updateSize = () => {
+		// const bounds = getBounds();
+		const top = props.safeAreaInsetTop ? bounds.value.statusBarHeight : 0;
+		const newSize:NavbarSize = {
+			height: bounds.value.navbarHeight + top,
+			statusBarHeight: bounds.value.statusBarHeight,
+			navbarHeight: bounds.value.navbarHeight,
+			capsuleHeight: bounds.value.capsule.height,
+			capsuleWidth: bounds.value.capsule.width,
+			paddingLeft: bounds.value.paddingLeft,
+			paddingRight: bounds.value.paddingRight,
+			isFixed: props.fixed
+		};
+		size.value = newSize;
+		emit("size", {...newSize});
+	};
+	
+	// #ifndef APP || WEB
+	onMounted(()=>{
+		updateSize()
+	})
+	// #endif
+	// #ifdef APP || WEB
+	onMounted(()=>{
+		nextTick(()=>{
+			// if(!props.fixed) return
+			bounds.value = getBounds();
+			// const top = (props.safeAreaInsetTop ? bounds.statusBarHeight : 0)
+			// if(props.fixed) {
+			// 	if(contentRef.value != null) {
+			// 		if(top > 0){
+			// 			contentRef.value!.style.setProperty('padding-top', top + 'px')
+			// 		}
+			// 		if(bounds.capsule.width > 0) {
+			// 			contentRef.value!.style.setProperty('padding-right', bounds.paddingRight + 'px')
+			// 		}
+			// 	}
+			// 	if(placeholderRef.value != null) {
+			// 		placeholderRef.value!.style.setProperty('height', bounds.navbarHeight + top + 'px')
+			// 	}
+			// }
+			updateSize()
+		})
+	})
+	// #endif
+</script>
+<style lang="scss">
+	@import './index-u';
+</style>

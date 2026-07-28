@@ -1,0 +1,136 @@
+<template>
+	<view class="demo-block">
+		<!-- <l-navbar title="标题文字" :leftArrow="true" safeAreaInsetTop placeholder></l-navbar> -->
+		<text class="demo-block__title-text ultra">Navbar 导航栏</text>
+		<text class="demo-block__desc-text">为页面提供导航功能，常用于页面顶部。</text>	
+		<view class="demo-block__body">
+			<view class="demo-block">
+				<text class="demo-block__title-text">基础</text>
+				<view class="demo-block__body">
+					<l-navbar title="标题文字" :fixed="false" :leftArrow="true"></l-navbar>
+					<view style="height: 10px;"></view>
+					<l-navbar title="标题文字" :fixed="false" :leftArrow="true">
+						<template #left>
+						    <l-icon style="color: var(--doc-summary-color, #000000E0)" class="navbar-icon" name="close" size="24px" />
+						</template>
+						<template #right>
+						    <l-icon style="color: var(--doc-summary-color, #000000E0)" class="navbar-icon" name="ellipsis" size="24px" />
+						</template>
+					</l-navbar>
+					<view style="height: 10px;"></view>
+					<l-navbar title="标题文字超出" :title-max-length="5" :fixed="false" @click-left="handleClick">
+					    <template #capsule>
+					      <view class="custom-capsule">
+					        <l-icon style="color: var(--doc-summary-color, #000000E0)" name="chevron-left" size="20px" class="custom-capsule__icon" />
+					        <!-- <l-divider vertical /> -->
+							<view style="width: 1px;height: 20px; background-color: var(--doc-card-summary-color, #f3f3f3); margin: 0 10px;"></view>
+					        <l-icon style="color: var(--doc-summary-color, #000000E0)" name="home" size="20px" class="custom-capsule__icon" />
+					      </view>
+					    </template>
+					    <template #right>
+					      <l-icon style="color: var(--doc-summary-color, #000000E0)" name="ellipsis" size="24px" />
+					    </template>
+					</l-navbar>
+					<view style="height: 10px;"></view>
+					<l-navbar :fixed="false">
+					    <template #left>
+					       <view style="width: 90%; ">
+								<l-search placeholder="搜索预设文案?" shape="round" />
+							</view>
+					    </template>
+					    <template #right>
+					        <l-icon style="color: var(--doc-summary-color, #000000E0)" class="navbar-icon" name="home" size="24px" />
+							<view style="width: 10px;"></view>
+					        <l-icon style="color: var(--doc-summary-color, #000000E0)" class="navbar-icon" name="ellipsis" size="24px" />
+					    </template>
+					</l-navbar>
+					<view style="height: 10px;"></view>
+					<l-navbar title="标题文字" :fixed="false" :leftArrow="true" bg-color="#3283ff" color="white">
+						    
+					</l-navbar>
+				</view>	
+			</view>	
+			
+		</view>	
+		
+		<view style="height: 1600px;"></view>
+	</view>
+</template>
+
+<script setup>
+	const handleClick = () => {}
+</script>
+
+<style lang="scss">
+	$card-bg-color: var(--doc-card-bg-color, white);
+	// $page-bg-color: var(--doc-page-bg-color, #f5f5f5);
+	$title-color: var(--doc-title-color, #000000E6);
+	$summary-color: var(--doc-summary-color, #00000099);
+	
+	.custom-capsule {
+	  width: 100%;
+	  display: flex;
+	  align-items: center;
+	  justify-content: center;
+	  flex-direction: row;
+	}
+	
+	.custom-capsule__icon {
+	  position: relative;
+	  margin: 0;
+	  color: $summary-color;
+	}
+	.navbar-icon {
+		color: $summary-color;
+	}
+	.demo-block {
+		margin: 32px  0;
+		// overflow: visible;
+		&.card{
+			background-color: $card-bg-color;
+			transition-property: background-color;
+			// transition-duration: 300ms;
+			padding: 30rpx;
+			margin-bottom: 20rpx;
+		}
+		&__title {
+			margin: 0;
+			margin-top: 8px;
+			&-text {
+				padding: 0 16px;
+				// display: block;
+				color: $summary-color;
+				font-weight: 400;
+				font-size: 14px;
+				line-height: 16px;
+				
+				&.large {
+					color: $title-color;
+					font-size: 18px;
+					font-weight: 700;
+					line-height: 26px;
+				}
+				&.ultra {
+					color: $title-color;
+					font-size: 24px;
+					font-weight: 700;
+					line-height: 32px;
+				}
+			}
+		}
+		&__desc-text {
+			color: $summary-color;
+			margin: 8px 16px 0 16px;
+			font-size: 14px;
+			line-height: 22px;
+		}
+		&__body {
+			margin: 16px 0;
+			overflow: visible;
+			.demo-block {
+				// margin-top: 0px;
+				margin: 0;
+			}
+		}
+	}
+</style>
