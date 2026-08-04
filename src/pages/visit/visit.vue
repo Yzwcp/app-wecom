@@ -9,287 +9,241 @@
       @click-left="goBack"
     />
 
-    <!-- 搜索与Tab头部区域 -->
-    <view class="header-box">
-      <view class="search-box">
-        <wd-search
-          v-model="searchKey"
-          placeholder="搜索客户名称或地址"
-          hide-cancel
-          bg-color="#f7f8fa"
-          @search="handleSearch"
-          @clear="handleSearch"
-        />
-      </view>
+    <!-- 搜索栏 -->
+    <view class="search-box">
+      <wd-search
+        v-model="searchKey"
+        placeholder="搜索客户名称或地址"
+        hide-cancel
+        @search="handleSearch"
+        @clear="handleSearch"
+      />
+    </view>
 
-      <!-- 状态过滤 Tab -->
-      <view class="tabs-box">
-        <wd-tabs
-          v-model="activeTab"
-          color="#0066ff"
-          inactive-color="#999999"
-          line-width="32rpx"
-          @change="handleTabChange"
-        >
-          <wd-tab title="全部" name="all"></wd-tab>
-          <wd-tab title="待回访" name="pending"></wd-tab>
-          <wd-tab title="已完成" name="completed"></wd-tab>
-        </wd-tabs>
-      </view>
+    <!-- 状态过滤 Tab -->
+    <view class="tabs-box">
+      <wd-tabs
+        v-model="activeTab"
+        color="#0066ff"
+        inactive-color="#666"
+        @change="handleTabChange"
+      >
+        <wd-tab title="全部" name="all"></wd-tab>
+        <wd-tab title="待回访" name="pending"></wd-tab>
+        <wd-tab title="已完成" name="completed"></wd-tab>
+      </wd-tabs>
     </view>
 
     <!-- 列表主体 -->
-    <scroll-view
-      scroll-y
-      class="list-scroll"
-      refresher-enabled
-      :refresher-triggered="isRefreshing"
-      @refresherrefresh="handleRefresh"
-      :lower-threshold="100"
-      @scrolltolower="handleScrollToLower"
-    >
-      <view class="content-container">
-        <view v-for="item in visitList" :key="item.id" class="visit-card">
-          <!-- 卡片头部标题与状态 -->
-          <view class="card-header">
-            <view class="title-left">
-              <view class="store-icon-box">
-                <wd-icon name="shop" size="18px" color="#fff" />
-              </view>
-              <text class="customer-name">{{ item.customerName }}</text>
+    <view class="content-container">
+      <view v-for="item in filteredList" :key="item.id" class="visit-card">
+        <!-- 卡片头部标题与状态 -->
+        <view class="card-header">
+          <view class="title-left">
+            <view class="store-icon-box">
+              <wd-icon name="home" size="16px" color="#fff" />
             </view>
-            <text
-              :class="[
-                'status-text',
-                isPending(item.status) ? 'text-red' : 'text-blue',
-              ]"
-            >
-              {{ getStatusText(item.status) }}
-            </text>
+            <text class="customer-name">{{ item.customerName }}</text>
           </view>
-
-          <!-- 卡片明细信息 -->
-          <view class="card-body">
-            <view class="info-item">
-              <text class="label">合同编号</text>
-              <text class="val">{{ item.contractNo || "-" }}</text>
-            </view>
-            <view class="info-item">
-              <text class="label">合同标题</text>
-              <text class="val">{{ item.contractTitle || "-" }}</text>
-            </view>
-            <view class="info-item">
-              <text class="label">联系人</text>
-              <text class="val">{{ item.contactName || "-" }}</text>
-            </view>
-            <view class="info-item">
-              <text class="label">联系电话</text>
-              <text class="val">{{ item.contactPhone || "-" }}</text>
-            </view>
-            <view class="info-item align-top">
-              <text class="label">详细地址</text>
-              <text class="val address-val">{{ item.address || "-" }}</text>
-            </view>
-            <view class="info-item">
-              <text class="label">完工时间</text>
-              <text class="val">{{ item.finishTime || "-" }}</text>
-            </view>
-          </view>
-
-          <!-- 操作按钮：仅在待回访状态下显示 -->
-          <view v-if="isPending(item.status)" class="card-footer">
-            <button class="custom-action-btn" @click="goToForm(item)">
-              去回访
-            </button>
-          </view>
-        </view>
-
-        <!-- 加载更多 -->
-        <view v-if="visitList.length > 0" class="load-more-box">
-          <text v-if="loadMoreStatus === 'loading'" class="load-more-text"
-            >加载中...</text
+          <text
+            :class="[
+              'status-text',
+              getStatus(item) === '已完成' ? 'text-blue' : 'text-gray',
+            ]"
           >
-          <text v-if="loadMoreStatus === 'nomore'" class="load-more-text"
-            >没有更多了</text
+            {{ getStatus(item) }}
+          </text>
+        </view>
+
+        <!-- 卡片明细信息 -->
+        <view class="card-body">
+          <view class="info-item">
+            <text class="label">合同编号</text>
+            <text class="val">{{ item.contractNo }}</text>
+          </view>
+          <view class="info-item">
+            <text class="label">创建时间</text>
+            <text class="val">{{ item.createTime }}</text>
+          </view>
+          <view class="info-item">
+            <text class="label">负责人</text>
+            <text class="val">{{ item.managerName }}</text>
+          </view>
+        </view>
+
+        <!-- 操作按钮 -->
+        <view class="card-footer">
+          <wd-button
+            v-if="getStatus(item) === '待回访'"
+            type="primary"
+            plain
+            block
+            class="action-btn"
+            @click="goToForm(item)"
+            >去回访</wd-button
           >
-        </view>
-
-        <!-- 空状态 -->
-        <view v-if="visitList.length === 0 && !loading" class="empty-box">
-          <wd-icon name="comment-circle" size="48px" color="#ccc" />
-          <text class="empty-text">没有找到相关的回访任务</text>
-        </view>
-
-        <view v-if="loading && visitList.length === 0" class="empty-box">
-          <text class="empty-text">加载中...</text>
+          <wd-button
+            v-if="getStatus(item) === '已完成'"
+            type="secondary"
+            plain
+            block
+            class="action-btn view-btn"
+            @click="goToView(item)"
+            >查看回访</wd-button
+          >
         </view>
       </view>
 
-      <view class="safe-bottom"></view>
-    </scroll-view>
+      <!-- 空状态兜底 -->
+      <view v-if="filteredList.length === 0" class="empty-box">
+        <wd-icon name="comment-circle" size="48px" color="#ccc" />
+        <text class="empty-text">没有找到相关的回访任务</text>
+      </view>
+    </view>
   </view>
 </template>
 
 <script setup>
-import { ref } from "vue";
-import { onLoad } from "@dcloudio/uni-app";
+import { ref, computed, onMounted } from "vue";
 import { getVisitPendingPage, getVisitRecordPage } from "@/api";
+import { onShow } from "@dcloudio/uni-app";
 
+onShow(() => {
+  fetchData(1);
+});
 const searchKey = ref("");
 const activeTab = ref("all");
-
-// 分页状态
 const visitList = ref([]);
-const current = ref(1);
-const size = ref(10);
-const pages = ref(0);
 const loading = ref(false);
-const isRefreshing = ref(false);
-const loadMoreStatus = ref("");
+const currentPage = ref(1);
+const totalPages = ref(0);
+const pageSize = 10;
 
-// 状态判断 & 文本
-function isPending(status) {
-  return String(status) === "PENDING" || status === "待回访";
-}
-
-function getStatusText(status) {
-  if (String(status) === "PENDING") return "待回访";
-  if (String(status) === "COMPLETED") return "已完成";
-  return status || "-";
-}
-
-// 获取列表
-async function fetchList(isReset = false) {
-  if (loading.value) return;
+// 获取列表数据
+async function fetchData(page = 1) {
   loading.value = true;
-
-  if (isReset) {
-    current.value = 1;
-  }
-
-  const params = {
-    current: current.value,
-    size: size.value,
-  };
-  if (searchKey.value.trim()) {
-    params.keyword = searchKey.value.trim();
-  }
-
   try {
+    const params = { current: page, size: pageSize };
     let res;
     if (activeTab.value === "pending") {
       res = await getVisitPendingPage(params);
-    } else if (activeTab.value === "completed") {
-      res = await getVisitRecordPage({ ...params, status: "COMPLETED" });
     } else {
       res = await getVisitRecordPage(params);
     }
-
     const records = res.records || [];
-
-    if (isReset || current.value === 1) {
+    if (page === 1) {
       visitList.value = records;
     } else {
       visitList.value = [...visitList.value, ...records];
     }
-
-    pages.value = res.pages || 0;
-    current.value = res.current || current.value;
-    loadMoreStatus.value = current.value >= pages.value ? "nomore" : "";
+    totalPages.value = res.pages || 0;
+    currentPage.value = page;
   } catch (error) {
     console.error("获取回访列表失败", error);
+    uni.showToast({ title: "获取列表失败", icon: "none" });
   } finally {
     loading.value = false;
-    isRefreshing.value = false;
   }
 }
 
-// 下拉刷新
-function handleRefresh() {
-  isRefreshing.value = true;
-  fetchList(true);
+// 根据 visitTime 判断状态
+function getStatus(item) {
+  return item.visitTime ? "已完成" : "待回访";
 }
 
-// 触底加载更多
-function handleScrollToLower() {
-  if (loading.value || loadMoreStatus.value === "nomore") return;
-  loadMoreStatus.value = "loading";
-  current.value++;
-  fetchList();
-}
-
-// Tab 切换
-function handleTabChange({ name }) {
-  activeTab.value = name;
-  fetchList(true);
-}
-
-// 搜索
-function handleSearch() {
-  fetchList(true);
-}
+// 联动过滤筛选
+const filteredList = computed(() => {
+  if (!searchKey.value) return visitList.value;
+  return visitList.value.filter((item) => {
+    const matchesSearch =
+      (item.customerName && item.customerName.includes(searchKey.value)) ||
+      (item.contractNo && item.contractNo.includes(searchKey.value));
+    return matchesSearch;
+  });
+});
 
 function goBack() {
   uni.navigateBack();
 }
 
+function handleTabChange({ name }) {
+  console.log(name);
+
+  activeTab.value = name;
+  fetchData(1);
+}
+
+function handleSearch() {
+  // 搜索已在 computed 中本地过滤
+}
+
+// 触底加载更多
+function onReachBottom() {
+  if (currentPage.value < totalPages.value && !loading.value) {
+    fetchData(currentPage.value + 1);
+  }
+}
+
 // 点击去回访跳转
 function goToForm(item) {
-  uni.navigateTo({
-    url: `/pages/visit/commit?id=${item.id}&customerId=${item.customerId || ""}&contractId=${item.contractId || ""}&name=${encodeURIComponent(item.customerName || "")}&contact=${encodeURIComponent(item.contactName || "")}&phone=${item.contactPhone || ""}`,
+  uni.$router.push({
+    url: "/pages/visit/commit",
+    query: {
+      id: item.id,
+      customerId: item.customerId,
+      contractId: item.contractId,
+      name: item.customerName || "",
+    },
   });
 }
 
-// 初始加载
-onLoad(() => {
-  fetchList(true);
-});
+// 点击查看回访跳转（只读模式）
+function goToView(item) {
+  uni.$router.push({
+    url: "/pages/visit/commit",
+    query: {
+      id: item.id,
+      readonly: "true",
+    },
+  });
+}
 </script>
 
 <style scoped lang="scss">
 .page {
   width: 100%;
   min-height: 100vh;
-  background-color: #f7f9fc;
-}
-.header-box {
-  background-color: #ffffff;
+  background-color: #f7f8fa;
 }
 .search-box {
-  padding: 16rpx 32rpx 8rpx;
+  background-color: #ffffff;
+  padding: 16rpx 24rpx 8rpx;
 }
 .tabs-box {
-  :deep(.wd-tabs__nav-item) {
-    font-size: 30rpx;
-    &.is-active {
-      font-weight: bold;
-      color: #111111 !important;
-    }
-  }
+  background-color: #ffffff;
+  border-bottom: 1px solid #f2f3f5;
 }
-
-.list-scroll {
-  height: calc(100vh - 88rpx - 180rpx - env(safe-area-inset-top));
-}
-
 .content-container {
-  padding: 32rpx 24rpx;
+  padding: 24rpx;
   display: flex;
   flex-direction: column;
   gap: 24rpx;
 }
 
-/* 卡片样式 */
+/* 卡片样式定制 */
 .visit-card {
   background-color: #ffffff;
   border-radius: 16rpx;
   padding: 32rpx;
+  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.02);
 
   .card-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 32rpx;
+    border-bottom: 1px solid #f5f6f7;
+    padding-bottom: 24rpx;
+    margin-bottom: 24rpx;
 
     .title-left {
       display: flex;
@@ -297,18 +251,18 @@ onLoad(() => {
       gap: 16rpx;
 
       .store-icon-box {
-        width: 48rpx;
-        height: 48rpx;
+        width: 44rpx;
+        height: 44rpx;
         background-color: #0066ff;
-        border-radius: 10rpx;
+        border-radius: 8rpx;
         display: flex;
         align-items: center;
         justify-content: center;
       }
       .customer-name {
-        font-size: 34rpx;
+        font-size: 32rpx;
         font-weight: bold;
-        color: #111111;
+        color: #333;
       }
     }
 
@@ -318,8 +272,8 @@ onLoad(() => {
       &.text-blue {
         color: #0066ff;
       }
-      &.text-red {
-        color: #ff3b30;
+      &.text-gray {
+        color: #999;
       }
     }
   }
@@ -328,61 +282,43 @@ onLoad(() => {
 .card-body {
   display: flex;
   flex-direction: column;
-  gap: 28rpx;
+  gap: 20rpx;
+  margin-bottom: 28rpx;
 
   .info-item {
     display: flex;
     justify-content: space-between;
-    align-items: center;
     font-size: 28rpx;
-
-    &.align-top {
-      align-items: flex-start;
-    }
-
     .label {
-      color: #333333;
-      min-width: 140rpx;
+      color: #666;
     }
     .val {
-      color: #111111;
-      text-align: right;
-      font-weight: 400;
-    }
-    .address-val {
-      max-width: 480rpx;
-      line-height: 1.4;
+      color: #333;
+      font-weight: 500;
     }
   }
 }
 
 .card-footer {
-  margin-top: 36rpx;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 
-  .custom-action-btn {
-    width: 100%;
-    height: 84rpx;
-    line-height: 82rpx;
-    background-color: #ffffff;
-    border: 2rpx solid #0066ff;
-    color: #0066ff;
-    border-radius: 12rpx;
-    font-size: 30rpx;
-    font-weight: 500;
-    text-align: center;
-
-    &::after {
-      border: none;
+  gap: 10rpx;
+  .action-btn {
+    :deep(.wd-button) {
+      border-color: #0066ff !important;
+      color: #0066ff !important;
+      border-radius: 12rpx;
+      height: 80rpx;
+      font-size: 28rpx;
     }
   }
-}
-
-.load-more-box {
-  text-align: center;
-  padding: 24rpx 0;
-  .load-more-text {
-    font-size: 24rpx;
-    color: #999;
+  .view-btn {
+    :deep(.wd-button) {
+      background-color: #0066ff !important;
+      color: #fff !important;
+    }
   }
 }
 
@@ -396,9 +332,5 @@ onLoad(() => {
     font-size: 26rpx;
     color: #999;
   }
-}
-
-.safe-bottom {
-  height: 60rpx;
 }
 </style>

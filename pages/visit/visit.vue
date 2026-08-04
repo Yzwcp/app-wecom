@@ -48,10 +48,10 @@
           <text
             :class="[
               'status-text',
-              item.status === '已完成' ? 'text-blue' : 'text-gray',
+              getStatus(item) === '已完成' ? 'text-blue' : 'text-gray',
             ]"
           >
-            {{ item.status }}
+            {{ getStatus(item) }}
           </text>
         </view>
 
@@ -62,12 +62,12 @@
             <text class="val">{{ item.contractNo }}</text>
           </view>
           <view class="info-item">
-            <text class="label">完成时间</text>
-            <text class="val">{{ item.finishTime }}</text>
+            <text class="label">创建时间</text>
+            <text class="val">{{ item.createTime }}</text>
           </view>
           <view class="info-item">
             <text class="label">负责人</text>
-            <text class="val">{{ item.charger }}</text>
+            <text class="val">{{ item.managerName }}</text>
           </view>
         </view>
 
@@ -94,42 +94,56 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
+import { getVisitPendingPage, getVisitRecordPage } from "@/api";
 
 const searchKey = ref("");
 const activeTab = ref("all");
+const visitList = ref([]);
+const loading = ref(false);
+const currentPage = ref(1);
+const totalPages = ref(0);
+const pageSize = 10;
 
-// 模拟回访列表数据
-const visitList = ref([
-  {
-    id: 1,
-    customerName: "星际网吧",
-    contractNo: "HT-20260627-0001",
-    finishTime: "06-27 09:00 ~ 18:00",
-    charger: "李先生",
-    status: "已完成",
-  },
-  {
-    id: 2,
-    customerName: "星际网吧",
-    contractNo: "HT-20260627-0001",
-    finishTime: "06-27 09:00 ~ 18:00",
-    charger: "李先生",
-    status: "已完成",
-  },
-]);
+// 获取列表数据
+async function fetchData(page = 1) {
+  loading.value = true;
+  try {
+    const params = { current: page, size: pageSize };
+    let res;
+    if (activeTab.value === "pending") {
+      res = await getVisitPendingPage(params);
+    } else {
+      res = await getVisitRecordPage(params);
+    }
+    const records = res.records || [];
+    if (page === 1) {
+      visitList.value = records;
+    } else {
+      visitList.value = [...visitList.value, ...records];
+    }
+    totalPages.value = res.pages || 0;
+    currentPage.value = page;
+  } catch (error) {
+    console.error("获取回访列表失败", error);
+    uni.showToast({ title: "获取列表失败", icon: "none" });
+  } finally {
+    loading.value = false;
+  }
+}
+
+// 根据 visitTime 判断状态
+function getStatus(item) {
+  return item.visitTime ? "已完成" : "待回访";
+}
 
 // 联动过滤筛选
 const filteredList = computed(() => {
+  if (!searchKey.value) return visitList.value;
   return visitList.value.filter((item) => {
     const matchesSearch =
-      item.customerName.includes(searchKey.value) ||
-      item.contractNo.includes(searchKey.value);
-    if (activeTab.value === "all") return matchesSearch;
-    if (activeTab.value === "pending")
-      return matchesSearch && item.status === "待回访";
-    if (activeTab.value === "completed")
-      return matchesSearch && item.status === "已完成";
+      (item.customerName && item.customerName.includes(searchKey.value)) ||
+      (item.contractNo && item.contractNo.includes(searchKey.value));
     return matchesSearch;
   });
 });
@@ -138,15 +152,31 @@ function goBack() {
   uni.navigateBack();
 }
 
-function handleTabChange() {}
-function handleSearch() {}
+function handleTabChange() {
+  fetchData(1);
+}
+
+function handleSearch() {
+  // 搜索已在 computed 中本地过滤
+}
+
+// 触底加载更多
+function onReachBottom() {
+  if (currentPage.value < totalPages.value && !loading.value) {
+    fetchData(currentPage.value + 1);
+  }
+}
 
 // 点击去回访跳转
 function goToForm(item) {
   uni.navigateTo({
-    url: `/pages/visit/commit?id=${item.id}&name=${encodeURIComponent(item.customerName)}`,
+    url: `/pages/visit/commit?id=${item.id}&customerId=${item.customerId}&contractId=${item.contractId}&name=${encodeURIComponent(item.customerName || "")}`,
   });
 }
+
+onMounted(() => {
+  fetchData(1);
+});
 </script>
 
 <style scoped lang="scss">

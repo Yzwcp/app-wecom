@@ -157,7 +157,7 @@
         <!-- 无记录 -->
         <view v-if="visitList.length === 0" class="empty-record-box">
           <text class="empty-text">暂无记录</text>
-          <text class="link-btn" @click="handleAction('create')">去新建</text>
+          <!-- <text class="link-btn" @click="handleAction('create')">去新建</text> -->
         </view>
 
         <!-- 有记录 -->
@@ -281,6 +281,9 @@ function handleAction(type, record) {
   if (type === "create") {
     uni.navigateTo({
       url: "/pages/construction/record",
+      query: {
+        mode: "create",
+      },
     });
   } else {
     uni.$router.push({

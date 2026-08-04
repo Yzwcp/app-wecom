@@ -146,7 +146,7 @@ function redirectToOAuth() {
 
 onLoad(() => {
   const code = getQueryParam("code");
-  alert(code);
+  // alert(code);
   if (code) {
     // 携带code参数，说明是OAuth回调，直接登录
     handleOpenidLogin(code);

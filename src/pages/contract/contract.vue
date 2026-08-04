@@ -44,44 +44,64 @@
     >
       <view v-for="item in contractList" :key="item.id" class="contract-card">
         <!-- 右上角状态标签 -->
-        <view :class="['status-badge', getStatusClass(item.businessStatus)]">
-          {{ getStatusText(item.businessStatus) }}
+        <view :class="['status-badge', getStatusClass(item.status)]">
+          {{ getStatusText(item.status) }}
         </view>
 
         <!-- 卡片内容 -->
         <view class="card-top-info">
-          <text class="contract-no">合同编号：{{ item.id }}</text>
-          <view class="company-name">{{ item.storeName }}</view>
+          <text class="contract-no">合同编号：{{ item.contractNo }}</text>
+          <view class="company-name">{{ item.customerName }}</view>
         </view>
 
         <!-- 详情两列网格布局 -->
         <view class="card-grid">
           <view class="grid-item">
             <text class="label">合同类型</text>
-            <text class="value">{{ item.type || "-" }}</text>
+            <text class="value">{{
+              getDictLabel("WJ_PROJECT_SERVICE", item.contractType) || "-"
+            }}</text>
           </view>
           <view class="grid-item">
             <text class="label">合同标题</text>
-            <text class="value text-ellipsis">{{ item.title || "-" }}</text>
+            <text class="value text-ellipsis">{{
+              item.contractName || "-"
+            }}</text>
           </view>
         </view>
 
         <!-- 签订时间 -->
         <view class="card-time-row">
           <text class="label">签订时间</text>
-          <text class="value">{{ item.signTime || "-" }}</text>
+          <text class="value">{{ item.signDate || "-" }}</text>
         </view>
 
         <!-- 底部操作按钮 -->
         <view class="card-actions">
           <wd-button
-            v-if="getStatusText(item.businessStatus) === '草稿'"
+            v-if="getStatusText(item.status) === '草稿'"
             type="error"
             plain
             size="small"
             class="mgr-16"
             @click="goEdit(item)"
             >继续编辑</wd-button
+          >
+          <wd-button
+            type="warning"
+            plain
+            size="small"
+            class="mgr-16"
+            @click="goSignRecord(item)"
+            >签署记录</wd-button
+          >
+          <wd-button
+            v-if="getStatusText(item.status) !== '草稿'"
+            type="primary"
+            size="small"
+            class="mgr-16"
+            @click="openSignModal(item)"
+            >发起电签</wd-button
           >
           <wd-button type="primary" size="small" @click="goDetail(item)"
             >查看详情</wd-button
@@ -111,7 +131,8 @@
       </view>
     </scroll-view>
 
-    <!-- 右下角新建按钮 -->
+    <!-- 发起电签弹窗 -->
+    <SignModal ref="signModalRef" @successful="handleSignSuccess" />
   </view>
 </template>
 
@@ -122,6 +143,7 @@ import { onLoad } from "@dcloudio/uni-app";
 import { getContractPage } from "@/api";
 import { useGlobalStore } from "@/store/global";
 import { useDict } from "@/hooks/useDict";
+import SignModal from "./components/SignModal.vue";
 
 const globalStore = useGlobalStore();
 const { dictMap, getDictLabel } = useDict();
@@ -129,6 +151,7 @@ const { dictMap, getDictLabel } = useDict();
 const searchKey = ref("");
 const activeTab = ref("all");
 const topHeight = ref(0);
+const signModalRef = ref(null);
 
 // 分页状态
 const contractList = ref([]);
@@ -141,12 +164,12 @@ const loadMoreStatus = ref(""); // '' | 'loading' | 'nomore'
 
 const tabsList = computed(() => dictMap["WJ_CONTRACT_STATUS"] || []);
 
-function getStatusText(businessStatus) {
-  return getDictLabel("WJ_CONTRACT_STATUS", businessStatus) || "未知";
+function getStatusText(status) {
+  return getDictLabel("WJ_CONTRACT_STATUS", status) || "未知";
 }
 
-function getStatusClass(businessStatus) {
-  const text = getStatusText(businessStatus);
+function getStatusClass(status) {
+  const text = getStatusText(status);
   if (text === "生效中") return "bg-blue";
   if (text === "草稿") return "bg-orange";
   if (text === "已完成") return "bg-green";
@@ -174,7 +197,7 @@ async function fetchList(isReset = false) {
   }
   // 状态筛选
   if (activeTab.value !== "all") {
-    params.businessStatus = activeTab.value;
+    params.status = activeTab.value;
   }
 
   try {
@@ -226,14 +249,31 @@ function handleSearch() {
 // 查看详情
 function goDetail(item) {
   uni.navigateTo({
-    url: `/pages/contract/form?id=${item.id}&name=${encodeURIComponent(item.storeName)}`,
+    url: `/pages/contract/form?id=${item.id}&mode=edit&name=${encodeURIComponent(item.customerName || "")}`,
   });
+}
+
+// 签署记录
+function goSignRecord(item) {
+  uni.navigateTo({
+    url: `/pages/contract/signRecord?contractId=${item.id}&name=${encodeURIComponent(item.customerName || "")}`,
+  });
+}
+
+// 发起电签
+function openSignModal(item) {
+  signModalRef.value?.onOpen(item);
+}
+
+// 电签发起成功后刷新列表
+function handleSignSuccess() {
+  fetchList(true);
 }
 
 // 继续编辑（草稿状态）
 function goEdit(item) {
   uni.navigateTo({
-    url: `/pages/contract/form?id=${item.id}&name=${encodeURIComponent(item.storeName)}`,
+    url: `/pages/contract/form?id=${item.id}&mode=edit&name=${encodeURIComponent(item.customerName || "")}`,
   });
 }
 
@@ -366,14 +406,16 @@ onLoad(async () => {
   display: flex;
   justify-content: flex-end;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 16rpx 0;
   .mgr-16 {
     margin-right: 16rpx;
   }
 
   :deep(.wd-button) {
     border-radius: 12rpx;
-    padding: 0 36rpx;
-    height: 68rpx;
+    padding: 0 32rpx;
+    height: 64rpx;
   }
 }
 

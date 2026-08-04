@@ -519,6 +519,16 @@ function goBack() {
 }
 
 async function handleSave(saveType) {
+  console.log(pageMode.value, isSigned.value);
+  if (pageMode.value === "create" && !isSigned.value) {
+    uni.showModal({
+      title: "提示",
+      content: "请先完成签到",
+      showCancel: true,
+      success: ({ confirm, cancel }) => {},
+    });
+    return;
+  }
   uni.showLoading({ title: "保存中..." });
 
   // beforePhotos/afterPhotos 可能是 string（单图）或 string[]（多图）
@@ -566,6 +576,15 @@ async function handleSave(saveType) {
 }
 
 function handleComplete() {
+  if (pageMode.value === "create" && !isSigned.value) {
+    uni.showModal({
+      title: "提示",
+      content: "请先完成签到",
+      showCancel: true,
+      success: ({ confirm, cancel }) => {},
+    });
+    return;
+  }
   uni.showModal({
     title: "提示",
     content: "提交后不可编辑",

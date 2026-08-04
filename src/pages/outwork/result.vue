@@ -109,7 +109,7 @@ const { dictMap, getDictLabel } = useDict();
 
 // 满意度选项（从字典获取）
 const satisfactionOptions = computed(
-  () => dictMap["WJ_CUSTOMER_SATISFACTION"] || [],
+  () => dictMap["WJ_CUSTOMER_INTENTION"] || [],
 );
 
 const query = ref({});

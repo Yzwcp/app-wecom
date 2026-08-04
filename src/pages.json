@@ -112,6 +112,13 @@
       }
     },
     {
+      "path": "pages/contract/signRecord",
+      "style": {
+        "navigationBarTitleText": "合同签署记录",
+        "navigationStyle": "custom"
+      }
+    },
+    {
       "path": "pages/login/login",
       "style": {
         "navigationBarTitleText": "登录",

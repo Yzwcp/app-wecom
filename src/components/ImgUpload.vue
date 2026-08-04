@@ -5,6 +5,8 @@
     :limit="limit"
     :disabled="disabled || readonly"
     :accept="accept"
+    :extension="extension"
+    :max-size="maxSize"
     reupload
     :upload-method="customUpload"
     @success="handleSuccess"
@@ -17,6 +19,7 @@
 import { ref, watch } from "vue";
 import { useGlobalStore } from "@/store/global";
 import { baseUrl } from "../utils/config";
+import { extractFileIdFromUrl } from "@/utils/tools";
 
 const props = defineProps({
   modelValue: { type: [String, Array], default: "" },
@@ -24,17 +27,25 @@ const props = defineProps({
   disabled: { type: Boolean, default: false },
   readonly: { type: Boolean, default: false },
   limit: { type: Number, default: 1 },
+  /** 文件类型：image | video | media | all | file（all/file 支持任意文件上传） */
   accept: { type: String, default: "image" },
+  /** 文件扩展名过滤，如 ['.pdf', '.jpg'] */
+  extension: { type: Array, default: () => [] },
+  /** 单个文件大小限制（MB），默认 0 不限制 */
+  sizeLimit: { type: Number, default: 0 },
   action: { type: String, default: "/wjapp/wjMobile/file/upload" },
   urlKey: { type: String, default: "url" },
 });
 
-const emit = defineEmits(["update:modelValue", "extraData"]);
+const emit = defineEmits(["update:modelValue", "update:fileId", "extraData"]);
 
 const globalStore = useGlobalStore();
 const fileList = ref([]);
 
 const uploadUrl = baseUrl + props.action;
+// wd-upload maxSize 单位为字节
+const maxSize =
+  props.sizeLimit > 0 ? props.sizeLimit * 1024 * 1024 : Number.MAX_VALUE;
 
 // 将 modelValue (String|Array) 转为内部 fileList
 function valueToFileList(val) {
@@ -100,14 +111,21 @@ function extractUrl(response) {
   return response?.[1] || "";
 }
 
-// 上传成功：提取 URL 写入 v-model
+// 上传成功：提取 URL 写入 v-model，同时回传文件 ID
 function handleSuccess(result) {
   const response = result.file.response;
   const newUrl = extractUrl(response);
+  const fileId =
+    (typeof response === "object" &&
+      !Array.isArray(response) &&
+      (response.id || response.fileId)) ||
+    extractFileIdFromUrl(newUrl);
 
   if (typeof response === "object" && !Array.isArray(response)) {
     emit("extraData", response);
   }
+
+  emit("update:fileId", fileId || "");
 
   if (props.limit === 1) {
     // 单图模式：直接传字符串
@@ -131,6 +149,7 @@ function handleRemove(event) {
   const file = event?.file || event;
   if (props.limit === 1) {
     emit("update:modelValue", "");
+    emit("update:fileId", "");
   } else {
     const existing = Array.isArray(props.modelValue)
       ? [...props.modelValue]
