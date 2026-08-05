@@ -1034,11 +1034,24 @@ async function handleSubmit() {
   try {
     const data = buildSubmitData();
     await editCustomer(data);
-    uni.showToast({ title: "保存成功", icon: "success" });
+    uni.showModal({
+      title: "提示",
+      content: "保存成功",
+      confirmText: "查看",
+      cancelText: "取消",
+      success: (res) => {
+        if (res.confirm) {
+          uni.$router.replace({
+            path: "/pages/contract/contract",
+          });
+        }
+        if (res.cancel) {
+          uni.navigateBack();
+        }
+      },
+    });
     // setTimeout(() => uni.navigateBack(), 1500);
   } catch (error) {
-    console.error("保存失败", error);
-    uni.showToast({ title: "保存失败", icon: "none" });
   } finally {
     submitting.value = false;
   }
@@ -1228,6 +1241,8 @@ onLoad((options) => {
   padding: 24rpx 32rpx;
   display: flex;
   gap: 24rpx;
+  display: flex;
+  justify-content: center;
   box-shadow: 0 -4rpx 16rpx rgba(0, 0, 0, 0.04);
   z-index: 1;
   .flex-btn {

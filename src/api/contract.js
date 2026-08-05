@@ -50,7 +50,7 @@ export function getContractSignCustomerAuthCheck(data) {
 }
 // 移动端获取客户放心签认证链接
 export function getContractSignCustomerAuthUrl(data) {
-  return get("/wjapp/wjMobile/contractSign/customerAuthUrl", data);
+  return post("/wjapp/wjMobile/contractSign/customerAuthUrl", data);
 }
 // 移动端获取客户放心签静默签授权链接
 export function getContractSignCustomerSilentAuthUrl(data) {

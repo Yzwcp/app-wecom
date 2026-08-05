@@ -1,14 +1,21 @@
 <template>
-  <wd-popup
-    v-model="visible"
-    position="center"
-    custom-style="width: 86%; border-radius: 24rpx; padding: 40rpx 32rpx;"
-    @close="onClose"
-  >
-    <view class="sign-modal">
-      <view class="modal-title">发起合同电签</view>
+  <view class="page">
+    <wd-navbar
+      title="发起合同电签"
+      left-arrow
+      fixed
+      placeholder
+      @click-left="goBack"
+    />
 
-      <!-- 认证状态 -->
+    <!-- 合同信息头 -->
+    <view class="header-card" v-if="contractName">
+      <view class="header-label">合同</view>
+      <view class="header-name">{{ contractName }}</view>
+    </view>
+
+    <view class="sign-body">
+      <!-- 认证状态提示条 -->
       <view
         class="auth-alert"
         :class="authed ? 'auth-alert-success' : 'auth-alert-warning'"
@@ -25,9 +32,9 @@
               : "该客户尚未完成放心签认证，请先生成认证链接"
           }}
         </text>
-        <text v-if="authStatusLabel" class="auth-status-label">{{
+        <!-- <text v-if="authStatusLabel" class="auth-status-label">{{
           authStatusLabel
-        }}</text>
+        }}</text> -->
       </view>
 
       <!-- 未认证：生成认证链接 -->
@@ -87,6 +94,18 @@
       <!-- 电签信息 -->
       <view class="divider">电签信息</view>
       <view class="form-item">
+        <view class="form-lbl">客户用章人</view>
+        <ApiSelectPicker
+          v-model="selectedContactId"
+          :api="fetchContacts"
+          label-key="contactName"
+          value-key="id"
+          title="选择客户用章人"
+          placeholder="请选择客户用章人"
+          @confirm="onContactConfirm"
+        />
+      </view>
+      <view class="form-item">
         <view class="form-lbl">
           客户用章人手机号
           <text class="red">*</text>
@@ -108,41 +127,88 @@
           placeholder="请输入客户用章人姓名（选填）"
         />
       </view>
-
-      <!-- 底部按钮 -->
-      <view class="modal-footer">
-        <wd-button class="footer-btn" plain @click="visible = false"
-          >取消</wd-button
-        >
-        <wd-button
-          class="footer-btn"
-          type="primary"
-          :loading="initiating"
-          @click="onSignSubmit"
-          >发起电签</wd-button
-        >
+      <view class="form-item">
+        <view class="form-lbl">签署方式</view>
+        <DictSelectPicker
+          v-model="signForm.signMode"
+          dict-key="CONTRACT_SIGN_MODE"
+          title="选择签署方式"
+          placeholder="请选择签署方式"
+        />
+      </view>
+      <view class="form-item switch-row">
+        <view class="switch-label">
+          <view class="form-lbl">强制客户手动签</view>
+          <view class="switch-desc"
+            >默认关闭：已授权静默签的客户自动静默签</view
+          >
+        </view>
+        <wd-switch v-model="signForm.forceManualSign" />
       </view>
     </view>
-  </wd-popup>
+
+    <!-- 底部按钮 -->
+    <view class="modal-footer">
+      <wd-button class="footer-btn" plain @click="goBack">取消</wd-button>
+      <wd-button
+        class="footer-btn"
+        type="primary"
+        :loading="initiating"
+        @click="onSignSubmit"
+        >发起电签</wd-button
+      >
+    </view>
+
+    <!-- 发起成功弹窗 -->
+    <wd-popup
+      v-model="resultShow"
+      position="center"
+      custom-style="width: 86%; border-radius: 24rpx; padding: 40rpx 32rpx;"
+    >
+      <view class="result-popup">
+        <view class="popup-title">电签发起成功</view>
+        <view v-if="signResult.signUrl" class="result-url-box">
+          <view class="result-lbl">签署链接（点击复制）</view>
+          <view class="result-url" @click="copyText(signResult.signUrl)">
+            <text class="result-url-text">{{ signResult.signUrl }}</text>
+            <wd-button size="small" type="primary">复制</wd-button>
+          </view>
+        </view>
+        <view v-else class="result-tip">未生成签署链接</view>
+        <view class="popup-footer">
+          <wd-button class="footer-btn" type="primary" @click="onResultConfirm"
+            >完成</wd-button
+          >
+        </view>
+      </view>
+    </wd-popup>
+  </view>
 </template>
 
 <script setup>
 import { ref, computed } from "vue";
+import { onLoad } from "@dcloudio/uni-app";
 import {
   getContractDetail,
+  getCustomerDetail,
   getContractSignCustomerAuthCheck,
   getContractSignCustomerAuthUrl,
   contractSignInitiate,
 } from "@/api";
 import { useDict } from "@/hooks/useDict";
-
-const emit = defineEmits(["successful"]);
+import ApiSelectPicker from "../../components/ApiSelectPicker.vue";
+import DictSelectPicker from "../../components/DictSelectPicker.vue";
 
 const { getDictLabel } = useDict();
 
-const visible = ref(false);
+const contractId = ref("");
+const contractName = ref("");
+const customerId = ref("");
+const contractFileId = ref("");
+
 const initiating = ref(false);
-const authChecking = ref(false);
+const resultShow = ref(false);
+const signResult = ref({});
 const authed = ref(false);
 const authMobile = ref("");
 const authUrl = ref("");
@@ -150,8 +216,13 @@ const authH5Url = ref("");
 const authPcUrl = ref("");
 const authStatus = ref("");
 const authUrlLoading = ref(false);
-const currentSignContract = ref({});
-const signForm = ref({ signerMobile: "", signerName: "" });
+const selectedContactId = ref("");
+const signForm = ref({
+  signerMobile: "",
+  signerName: "",
+  signMode: "",
+  forceManualSign: false,
+});
 
 // authStatus：UNAUTH-未认证 AUTHING-认证中 AUTHED-已认证
 const authStatusLabel = computed(() => {
@@ -168,13 +239,62 @@ const isAuthed = (data) => {
   return data.authStatus === "AUTHED";
 };
 
+onLoad(() => {
+  const options = uni.$router.query || {};
+  contractId.value = options.id || "";
+  contractName.value = decodeURIComponent(options.name || "");
+  loadContract();
+});
+
+// 拉取合同详情，回填客户 ID 与合同文件 ID（对齐 PC 逻辑）
+function loadContract() {
+  if (!contractId.value) {
+    uni.showToast({ title: "缺少合同参数，无法发起电签", icon: "none" });
+    setTimeout(() => goBack(), 1000);
+    return;
+  }
+  getContractDetail({ id: contractId.value })
+    .then((data) => {
+      const contract = data.contract || data;
+      customerId.value = contract.customerId || "";
+      contractFileId.value = contract.contractFileId || "";
+      checkAuth();
+      // 合同已有签署文件，弹出结果弹窗展示链接
+      if (contract.signedFileUrl) {
+        signResult.value = { signUrl: contract.signedFileUrl };
+        resultShow.value = true;
+      }
+    })
+    .catch(() => {
+      checkAuth();
+    });
+}
+
+// 获取客户联系人列表（供 ApiSelectPicker 使用）
+function fetchContacts() {
+  if (!customerId.value) return Promise.resolve([]);
+  return getCustomerDetail({ id: customerId.value }).then(
+    (res) => res.contactList || [],
+  );
+}
+
+// 选中联系人后回填用章人手机号与姓名
+function onContactConfirm(item) {
+  if (!item?.contactPhone) {
+    uni.showToast({ title: "该联系人未填写手机号", icon: "none" });
+    return;
+  }
+  signForm.value.signerMobile = item.contactPhone;
+  signForm.value.signerName = item.contactName || "";
+  uni.showToast({ title: "已回填联系人信息", icon: "none" });
+}
+
 function checkAuth() {
-  const storeId = currentSignContract.value.customerId;
+  const storeId = customerId.value;
   if (!storeId) {
     uni.showToast({ title: "该合同未关联客户，无法发起电签", icon: "none" });
     return;
   }
-  authChecking.value = true;
   getContractSignCustomerAuthCheck({ storeId })
     .then((data) => {
       authed.value = isAuthed(data);
@@ -182,9 +302,7 @@ function checkAuth() {
         authStatus.value = data.authStatus || data.status || "";
       }
     })
-    .finally(() => {
-      authChecking.value = false;
-    });
+    .catch(() => {});
 }
 
 function getAuthUrl() {
@@ -195,7 +313,7 @@ function getAuthUrl() {
   authUrlLoading.value = true;
   getContractSignCustomerAuthUrl({
     mobile: authMobile.value,
-    storeId: currentSignContract.value.customerId,
+    storeId: customerId.value,
   })
     .then((data) => {
       if (typeof data === "string") {
@@ -222,39 +340,9 @@ function copyText(text) {
   uni.setClipboardData({
     data: text,
     success: () => {
-      uni.showToast({ title: "已复制认证链接", icon: "none" });
+      uni.showToast({ title: "已复制", icon: "none" });
     },
   });
-}
-
-function onOpen(record) {
-  currentSignContract.value = { ...record };
-  signForm.value = { signerMobile: "", signerName: "" };
-  authed.value = false;
-  authMobile.value = "";
-  authUrl.value = "";
-  authH5Url.value = "";
-  authPcUrl.value = "";
-  authStatus.value = "";
-  visible.value = true;
-
-  // 拉取详情，回填合同文件与客户 ID（对齐 PC 逻辑）
-  getContractDetail({ id: record.id })
-    .then((data) => {
-      const contract = data.contract || data;
-      currentSignContract.value.customerId =
-        contract.customerId ||
-        record.customerId ||
-        currentSignContract.value.customerId;
-      currentSignContract.value.contractFileId =
-        contract.contractFileId ||
-        record.contractFileId ||
-        currentSignContract.value.contractFileId;
-      checkAuth();
-    })
-    .catch(() => {
-      checkAuth();
-    });
 }
 
 function onSignSubmit() {
@@ -264,35 +352,69 @@ function onSignSubmit() {
   }
   initiating.value = true;
   contractSignInitiate({
-    contractId: currentSignContract.value.id,
-    fileId: currentSignContract.value.contractFileId,
+    contractId: contractId.value,
+    fileId: contractFileId.value,
+    contactId: selectedContactId.value,
     signerMobile: signForm.value.signerMobile,
     signerName: signForm.value.signerName,
+    signMode: signForm.value.signMode,
+    forceManualSign: signForm.value.forceManualSign,
   })
-    .then(() => {
-      uni.showToast({ title: "电签发起成功", icon: "success" });
-      visible.value = false;
-      emit("successful");
+    .then((data) => {
+      signResult.value = data || {};
+      resultShow.value = true;
     })
     .finally(() => {
       initiating.value = false;
     });
 }
 
-function onClose() {
-  visible.value = false;
+// 成功弹窗点击完成，返回列表并刷新
+function onResultConfirm() {
+  resultShow.value = false;
+  uni.$router.back({
+    delta: 1,
+    params: { signSuccess: true },
+  });
 }
 
-defineExpose({ onOpen });
+function goBack() {
+  uni.navigateBack();
+}
 </script>
 
 <style scoped lang="scss">
-.modal-title {
-  font-size: 32rpx;
-  font-weight: bold;
-  color: #333;
-  text-align: center;
-  margin-bottom: 32rpx;
+.page {
+  width: 100%;
+  min-height: 100vh;
+  background-color: #f7f8fa;
+}
+
+/* 合同信息头 */
+.header-card {
+  background-color: #ffffff;
+  padding: 24rpx 32rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+  border-bottom: 1px solid #f2f3f5;
+
+  .header-label {
+    font-size: 24rpx;
+    color: #999;
+  }
+  .header-name {
+    font-size: 32rpx;
+    font-weight: bold;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+.sign-body {
+  padding: 32rpx 32rpx 200rpx;
 }
 
 .red {
@@ -344,7 +466,7 @@ defineExpose({ onOpen });
     margin-bottom: 16rpx;
     .auth-input {
       flex: 1;
-      background-color: #f7f8fa;
+      background-color: #fff;
       border-radius: 12rpx;
       padding: 16rpx 24rpx;
       font-size: 28rpx;
@@ -442,23 +564,100 @@ defineExpose({ onOpen });
     color: #666;
   }
   .form-input {
-    background-color: #f7f8fa;
+    background-color: #fff;
     border-radius: 12rpx;
     padding: 16rpx 24rpx;
     font-size: 28rpx;
   }
 }
 
+/* 强制手动签开关行 */
+.switch-row {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #ffffff;
+  border-radius: 16rpx;
+  padding: 24rpx 28rpx;
+
+  .switch-label {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8rpx;
+    min-width: 0;
+  }
+  .switch-desc {
+    font-size: 22rpx;
+    color: #999;
+  }
+}
+
+/* 底部按钮 */
 .modal-footer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
   display: flex;
   gap: 20rpx;
-  margin-top: 40rpx;
+  padding: 20rpx 32rpx calc(20rpx + env(safe-area-inset-bottom));
+  background-color: #ffffff;
+  box-shadow: 0 -4rpx 16rpx rgba(0, 0, 0, 0.04);
+  z-index: 10;
   .footer-btn {
     flex: 1;
     :deep(.wd-button) {
       width: 100%;
       height: 80rpx;
       border-radius: 12rpx;
+    }
+  }
+}
+
+/* 发起成功弹窗 */
+.result-popup {
+  .popup-title {
+    font-size: 32rpx;
+    font-weight: bold;
+    color: #333;
+    text-align: center;
+    margin-bottom: 32rpx;
+  }
+  .result-lbl {
+    font-size: 26rpx;
+    color: #999;
+    margin-bottom: 12rpx;
+  }
+  .result-url {
+    display: flex;
+    align-items: center;
+    gap: 16rpx;
+    background-color: #f7f8fa;
+    border-radius: 12rpx;
+    padding: 16rpx 20rpx;
+    .result-url-text {
+      flex: 1;
+      font-size: 24rpx;
+      color: #0066ff;
+      word-break: break-all;
+      min-width: 0;
+    }
+  }
+  .result-tip {
+    font-size: 26rpx;
+    color: #999;
+    text-align: center;
+    padding: 20rpx 0;
+  }
+  .popup-footer {
+    margin-top: 40rpx;
+    .footer-btn {
+      :deep(.wd-button) {
+        width: 100%;
+        height: 80rpx;
+        border-radius: 12rpx;
+      }
     }
   }
 }

@@ -491,14 +491,12 @@ function submitForm() {
   padding: 24rpx 32rpx;
   box-shadow: 0 -4rpx 16rpx rgba(0, 0, 0, 0.04);
   z-index: 2;
+  display: flex;
+  justify-content: center;
 
   .btn-item {
+    width: 100%;
     :deep(.wd-button) {
-      width: 100%;
-      height: 88rpx;
-      border-radius: 12rpx;
-      font-size: 28rpx;
-      font-weight: bold;
     }
   }
 }

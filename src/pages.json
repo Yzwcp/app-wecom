@@ -119,6 +119,13 @@
       }
     },
     {
+      "path": "pages/contract/sign",
+      "style": {
+        "navigationBarTitleText": "发起合同电签",
+        "navigationStyle": "custom"
+      }
+    },
+    {
       "path": "pages/login/login",
       "style": {
         "navigationBarTitleText": "登录",

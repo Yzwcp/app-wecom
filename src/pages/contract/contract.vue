@@ -96,7 +96,6 @@
             >签署记录</wd-button
           >
           <wd-button
-            v-if="getStatusText(item.status) !== '草稿'"
             type="primary"
             size="small"
             class="mgr-16"
@@ -130,20 +129,16 @@
         <text class="empty-text">加载中...</text>
       </view>
     </scroll-view>
-
-    <!-- 发起电签弹窗 -->
-    <SignModal ref="signModalRef" @successful="handleSignSuccess" />
   </view>
 </template>
 
 <script setup>
 import { ref, nextTick, computed } from "vue";
 import { getElementHeight } from "@/utils/tools";
-import { onLoad } from "@dcloudio/uni-app";
+import { onLoad, onShow } from "@dcloudio/uni-app";
 import { getContractPage } from "@/api";
 import { useGlobalStore } from "@/store/global";
 import { useDict } from "@/hooks/useDict";
-import SignModal from "./components/SignModal.vue";
 
 const globalStore = useGlobalStore();
 const { dictMap, getDictLabel } = useDict();
@@ -151,7 +146,6 @@ const { dictMap, getDictLabel } = useDict();
 const searchKey = ref("");
 const activeTab = ref("all");
 const topHeight = ref(0);
-const signModalRef = ref(null);
 
 // 分页状态
 const contractList = ref([]);
@@ -260,15 +254,24 @@ function goSignRecord(item) {
   });
 }
 
-// 发起电签
+// 发起电签（跳转页面）
 function openSignModal(item) {
-  signModalRef.value?.onOpen(item);
+  uni.$router.push({
+    url: "/pages/contract/sign",
+    query: {
+      id: item.id,
+      name: encodeURIComponent(item.customerName || ""),
+    },
+  });
 }
 
-// 电签发起成功后刷新列表
-function handleSignSuccess() {
-  fetchList(true);
-}
+// 从电签页面返回时刷新列表
+onShow(() => {
+  const result = uni.$router.params || {};
+  if (result?.signSuccess) {
+    fetchList(true);
+  }
+});
 
 // 继续编辑（草稿状态）
 function goEdit(item) {

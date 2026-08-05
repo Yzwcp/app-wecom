@@ -29,7 +29,11 @@
             @click="go('/pages/customer/list')"
           >
             <view class="icon-wrapper client-icon-box">
-              <wd-icon name="user" size="22px" color="#1976d2" />
+              <image
+                src="/static/index/kehu.png"
+                style="width: 100%; height: 100%"
+                mode="scaleToFill"
+              />
             </view>
             <view class="info-wrapper">
               <view class="item-label text-blue">我的客户</view>
@@ -37,7 +41,7 @@
                 <wd-count-to
                   :end-val="workData.customerCount"
                   color="#0d47a1"
-                  font-size="24px"
+                  font-size="28px"
                   bold
                 />
                 <text class="unit">位客户</text>
@@ -48,7 +52,11 @@
           <!-- 消息中心 -->
           <view class="feature-item message-bg">
             <view class="icon-wrapper message-icon-box">
-              <wd-icon name="chat" size="22px" color="#2e7d32" />
+              <image
+                src="/static/index/message.png"
+                style="width: 100%; height: 100%"
+                mode="scaleToFill"
+              />
             </view>
             <view class="info-wrapper">
               <view
@@ -59,8 +67,8 @@
               <view class="item-value text-green">
                 <wd-count-to
                   :end-val="workData.unreadMessageCount"
-                  color="#1b5e20"
-                  font-size="24px"
+                  color="#148663"
+                  font-size="28px"
                   bold
                 />
                 <text class="unit">条新消息</text>
@@ -79,7 +87,11 @@
             class="shortcut-card bg-orange-light"
             @click="go('/pages/map/map')"
           >
-            <wd-icon name="edit-outline" size="32px" color="#ff7043" />
+            <image
+              src="/static/index/1.png"
+              style="width: 80rpx; height: 80rpx"
+              mode="scaleToFill"
+            />
             <text class="shortcut-label">今日拜访</text>
           </view>
           <!-- 回访列表 -->
@@ -87,7 +99,11 @@
             class="shortcut-card bg-yellow-light"
             @click="go('/pages/visit/visit')"
           >
-            <wd-icon name="heart" size="32px" color="#ffa726" />
+            <image
+              src="/static/index/2.png"
+              style="width: 80rpx; height: 80rpx"
+              mode="scaleToFill"
+            />
             <text class="shortcut-label">回访列表</text>
           </view>
           <!-- 施工列表 -->
@@ -95,7 +111,11 @@
             class="shortcut-card bg-blue-light"
             @click="go('/pages/construction/list')"
           >
-            <wd-icon name="list" size="32px" color="#29b6f6" />
+            <image
+              src="/static/index/3.png"
+              style="width: 80rpx; height: 80rpx"
+              mode="scaleToFill"
+            />
             <text class="shortcut-label">施工列表</text>
           </view>
           <!-- 合同列表 -->
@@ -103,28 +123,36 @@
             class="shortcut-card bg-purple-light"
             @click="go('/pages/contract/contract')"
           >
-            <wd-icon name="certificate" size="32px" color="#ab47bc" />
+            <image
+              src="/static/index/4.png"
+              style="width: 80rpx; height: 80rpx"
+              mode="scaleToFill"
+            />
             <text class="shortcut-label">合同列表</text>
           </view>
           <view
-            class="shortcut-card bg-red-light"
+            class="shortcut-card bg-blue-light"
             @click="go('/pages/delivery/list')"
           >
-            <wd-icon name="delivery" size="32px" color="#ef5350" />
+            <image
+              src="/static/index/5.png"
+              style="width: 80rpx; height: 80rpx"
+              mode="scaleToFill"
+            />
             <text class="shortcut-label">发货管理</text>
           </view>
           <!-- <view
-            class="shortcut-card bg-purple-light"
+            class="shortcut-card bg-purple-light"s
             @click="go('/pages/map/map')"
           >
             <wd-icon name="certificate" size="32px" color="#ab47bc" />
             <text class="shortcut-label">地图</text>
           </view> -->
           <!-- 获取地理位置 -->
-          <view class="shortcut-card bg-green-light" @click="getGeoLocation">
+          <!-- <view class="shortcut-card bg-green-light" @click="getGeoLocation">
             <wd-icon name="location" size="32px" color="#2e7d32" />
             <text class="shortcut-label">获取地理位置</text>
-          </view>
+          </view> -->
         </view>
       </view>
     </view>
@@ -274,10 +302,10 @@ onLoad(() => {
   border-radius: 16rpx;
 
   &.client-bg {
-    background-color: #e3f2fd;
+    background-color: #abd5fc;
   }
   &.message-bg {
-    background-color: #e8f5e9;
+    background-color: #6ad9b3;
   }
 
   .icon-wrapper {
@@ -287,7 +315,7 @@ onLoad(() => {
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: #ffffff;
+    // background-color: #ffffff;
     flex-shrink: 0;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
   }
