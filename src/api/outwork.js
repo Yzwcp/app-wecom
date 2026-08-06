@@ -3,6 +3,9 @@ import { get, post } from "@/utils/request";
 export function getOutworkMap(data) {
   return get("/wjapp/wjMobile/outwork/todayMapList", data);
 }
+export function getOutworkPage(data) {
+  return get("/wjapp/wjMobile/outwork/page", data);
+}
 export function outworkCheckIn(data) {
   return post("/wjapp/wjMobile/outwork/checkIn", data);
 }

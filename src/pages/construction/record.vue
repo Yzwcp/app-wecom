@@ -189,55 +189,94 @@
         </view>
       </view>
 
-      <!-- 3. 材料明细模块 -->
-      <view class="card-module">
-        <view class="card-header" @click="toggleSection('material')">
-          <text class="title">材料明细</text>
-          <view class="collapse-btn">
-            <text class="status-text">{{
-              isCollapse.material ? "展开" : "折叠"
-            }}</text>
-            <wd-icon
-              :name="isCollapse.material ? 'arrow-down' : 'arrow-up'"
-              size="16px"
-              color="#999"
+      <!-- 3. 材料明细模块（参考订单产品明细 UI） -->
+      <view class="material-card">
+        <view class="section-header">
+          <wd-icon name="tag" size="18px" color="#0066ff" />
+          <text class="section-title">材料明细</text>
+          <text
+            class="section-action"
+            v-if="pageMode !== 'view'"
+            @click="addMaterial"
+            >+ 添加</text
+          >
+        </view>
+
+        <view
+          v-for="(item, index) in materialList"
+          :key="item.id || index"
+          class="material-item"
+        >
+          <view class="material-head">
+            <text class="material-index">材料 {{ index + 1 }}</text>
+            <text
+              v-if="pageMode !== 'view'"
+              class="material-remove"
+              @click="removeMaterial(index)"
+              >删除</text
+            >
+          </view>
+
+          <view class="field-block">
+            <view class="field-lbl">
+              材料名称
+              <text class="red">*</text>
+            </view>
+            <wd-input
+              v-model="item.materialName"
+              placeholder="请输入材料名称"
+              no-border
+              :readonly="pageMode === 'view'"
+              custom-class="form-input-bg material-input-bg"
+            />
+          </view>
+
+          <view class="two-col">
+            <view class="field-block flex-1">
+              <view class="field-lbl">
+                数量
+                <text class="red">*</text>
+              </view>
+              <wd-input
+                v-model="item.quantity"
+                type="number"
+                placeholder="数量"
+                no-border
+                :readonly="pageMode === 'view'"
+                custom-class="form-input-bg material-input-bg"
+              />
+            </view>
+            <view class="field-block flex-1">
+              <view class="field-lbl">
+                单位
+                <text class="red">*</text>
+              </view>
+              <wd-input
+                v-model="item.unit"
+                placeholder="如：米、个"
+                no-border
+                :readonly="pageMode === 'view'"
+                custom-class="form-input-bg material-input-bg"
+              />
+            </view>
+          </view>
+
+          <view class="field-block">
+            <view class="field-lbl">描述</view>
+            <wd-input
+              v-model="item.remark"
+              placeholder="请输入材料描述或备注"
+              no-border
+              :readonly="pageMode === 'view'"
+              custom-class="form-input-bg material-input-bg"
             />
           </view>
         </view>
 
-        <!-- 材料明细内容 -->
-        <view v-show="!isCollapse.material" class="card-body">
-          <!-- 材料预览列表 -->
-          <view v-if="materialList.length > 0" class="material-preview-list">
-            <view
-              v-for="(item, index) in materialList"
-              :key="item.id || index"
-              class="preview-row"
-              @click="goMaterialList"
-            >
-              <text class="preview-sn">{{ index + 1 }}</text>
-              <view class="preview-info">
-                <text class="preview-name">{{ item.materialName }}</text>
-                <text class="preview-remark" v-if="item.remark">{{
-                  item.remark
-                }}</text>
-              </view>
-              <text class="preview-qty"
-                >{{ item.quantity }}{{ item.unit }}</text
-              >
-            </view>
-          </view>
-          <view v-else class="preview-empty" @click="goMaterialList">
-            <text>暂无材料数据</text>
-          </view>
-          <view
-            v-if="pageMode !== 'view'"
-            class="nav-link"
-            @click="goMaterialList"
+        <view v-if="!materialList.length" class="material-empty">
+          <text class="material-empty-text"
+            >暂无材料明细，请点击右上角"添加"</text
           >
-            <text>编辑材料明细</text>
-            <wd-icon name="arrow" size="14px" color="#0066ff" />
-          </view>
         </view>
       </view>
     </view>
@@ -263,7 +302,7 @@
 
 <script setup>
 import { ref, computed, reactive } from "vue";
-import { onLoad, onShow } from "@dcloudio/uni-app";
+import { onLoad } from "@dcloudio/uni-app";
 import {
   doConstructionCheckIn,
   doConstructionVisitSave,
@@ -292,7 +331,7 @@ const checkInRange = reactive({
 });
 
 // 地图标记
-const customerMarkerIcon = "/static/map/map-icon.png";
+const customerMarkerIcon = "/static/map/SIGNED_IN.png";
 const myLocationIcon = "/static/icons/my-location.png";
 
 const mapMarkers = computed(() => {
@@ -305,8 +344,8 @@ const mapMarkers = computed(() => {
       latitude: customerBaseInfo.value.latitude,
       longitude: customerBaseInfo.value.longitude,
       iconPath: customerMarkerIcon,
-      width: 32,
-      height: 40,
+      width: 46,
+      height: 46,
     });
     // 地图中心取客户位置
     mapCenter.value = {
@@ -355,7 +394,6 @@ async function updateDistance(lat, lng) {
 const isCollapse = ref({
   location: false, // 定位详情是否折叠
   construction: false, // 施工详情是否折叠
-  material: false, // 材料明细是否折叠
 });
 
 // 2. 签到状态控制 (true = 已签到 [绿色风格], false = 未签到 [橙色风格])
@@ -529,6 +567,23 @@ async function handleSave(saveType) {
     });
     return;
   }
+  // 校验材料明细（与订单产品明细一致）
+  for (let i = 0; i < materialList.value.length; i++) {
+    const m = materialList.value[i];
+    if (!m.materialName) {
+      uni.showToast({ title: `第${i + 1}条材料名称不能为空`, icon: "none" });
+      return;
+    }
+    if (m.quantity === "" || m.quantity === null || m.quantity === undefined) {
+      uni.showToast({ title: `第${i + 1}条数量不能为空`, icon: "none" });
+      return;
+    }
+    if (!m.unit) {
+      uni.showToast({ title: `第${i + 1}条单位不能为空`, icon: "none" });
+      return;
+    }
+  }
+
   uni.showLoading({ title: "保存中..." });
 
   // beforePhotos/afterPhotos 可能是 string（单图）或 string[]（多图）
@@ -550,7 +605,10 @@ async function handleSave(saveType) {
     receiveRemark: receiveRemark.value || undefined,
     endTime: endTime.value || undefined,
     constructionRecord: constructionRecord.value || undefined,
-    materialList: materialList.value,
+    materialList: materialList.value.map((m) => ({
+      ...m,
+      quantity: Number(m.quantity),
+    })),
     beforeImageFileIdList: beforeImageUrl,
     afterImageFileIdList: afterImageUrl,
     saveType,
@@ -599,13 +657,33 @@ function handleComplete() {
   });
 }
 
-function goMaterialList() {
-  uni.$router.push({
-    url: "/pages/construction/material/material",
-    params: {
-      id: taskId.value,
-      subTaskId: subTaskId.value,
-      materialList: JSON.parse(JSON.stringify(materialList.value)),
+// 新增材料条目
+function newMaterial() {
+  return {
+    id: "",
+    materialName: "",
+    quantity: "",
+    unit: "",
+    remark: "",
+  };
+}
+
+function addMaterial() {
+  materialList.value.push(newMaterial());
+}
+
+// 删除材料条目（二次确认）
+function removeMaterial(index) {
+  const item = materialList.value[index];
+  uni.showModal({
+    title: "提示",
+    content: `确定要删除材料"${item.materialName || ""}"吗？`,
+    confirmColor: "#ee0a24",
+    success: (res) => {
+      if (res.confirm) {
+        materialList.value.splice(index, 1);
+        uni.showToast({ title: "已删除", icon: "success" });
+      }
     },
   });
 }
@@ -643,14 +721,6 @@ onLoad(() => {
       });
 
     // fetchMaterialList();
-  }
-});
-
-// 从材料页面返回时接收保存的数据
-onShow(() => {
-  const result = uni.$router.params;
-  if (result?.action === "updateMaterial" && result?.materialList) {
-    materialList.value = result.materialList;
   }
 });
 </script>
@@ -935,86 +1005,101 @@ onShow(() => {
   line-height: 1.6;
 }
 
-/* 3. 材料明细预览样式 */
-.material-preview-list {
-  .preview-row {
+/* 3. 材料明细（参考订单产品明细 UI） */
+.material-card {
+  background-color: #ffffff;
+  border-radius: 16rpx;
+  padding: 32rpx;
+  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.01);
+
+  .section-header {
     display: flex;
     align-items: center;
-    padding: 20rpx 0;
-    border-bottom: 1rpx solid #f5f5f5;
-    cursor: pointer;
+    gap: 12rpx;
+    border-bottom: 1px solid #f5f6f7;
+    padding-bottom: 20rpx;
+    margin-bottom: 28rpx;
 
-    &:last-child {
-      border-bottom: none;
-    }
-
-    .preview-sn {
-      width: 40rpx;
-      height: 40rpx;
-      line-height: 40rpx;
-      text-align: center;
-      background-color: #0066ff;
-      color: #fff;
-      font-size: 22rpx;
-      font-weight: bold;
-      border-radius: 8rpx;
-      margin-right: 16rpx;
-      flex-shrink: 0;
-    }
-
-    .preview-info {
+    .section-title {
       flex: 1;
-      min-width: 0;
-
-      .preview-name {
-        font-size: 28rpx;
-        color: #333;
-        font-weight: 500;
-        display: block;
-      }
-
-      .preview-remark {
-        font-size: 22rpx;
-        color: #999;
-        margin-top: 4rpx;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        display: block;
-      }
+      font-size: 28rpx;
+      font-weight: bold;
+      color: #333;
     }
 
-    .preview-qty {
-      font-size: 28rpx;
+    .section-action {
+      font-size: 26rpx;
       color: #0066ff;
-      font-weight: bold;
-      flex-shrink: 0;
-      margin-left: 16rpx;
     }
   }
 }
 
-.preview-empty {
-  text-align: center;
-  padding: 40rpx 0;
-  font-size: 26rpx;
-  color: #999;
-  cursor: pointer;
+/* 材料明细：内联编辑（参考订单产品明细 UI） */
+.material-item {
+  background-color: #fafbfc;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 20rpx;
+
+  .material-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20rpx;
+
+    .material-index {
+      font-size: 26rpx;
+      font-weight: bold;
+      color: #333;
+    }
+
+    .material-remove {
+      font-size: 24rpx;
+      color: #ef4444;
+    }
+  }
+
+  .two-col {
+    display: flex;
+    gap: 20rpx;
+  }
 }
 
-.nav-link {
+.field-block {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8rpx;
-  padding: 20rpx 0 8rpx;
-  border-top: 1rpx solid #f2f3f5;
-  margin-top: 8rpx;
-  cursor: pointer;
+  flex-direction: column;
+  gap: 16rpx;
+  margin-bottom: 28rpx;
+}
+.field-lbl {
+  font-size: 26rpx;
+  font-weight: 500;
+  color: #666;
+}
+.red {
+  color: #ef4444;
+  margin-left: 6rpx;
+}
+.flex-1 {
+  flex: 1;
+}
 
-  text {
-    font-size: 26rpx;
-    color: #0066ff;
+/* 材料输入框：白底加边框，与普通灰底输入框区分 */
+:deep(.material-input-bg) {
+  background-color: #ffffff !important;
+  border: 2rpx solid #dfe2e8 !important;
+  border-radius: 12rpx;
+  padding: 20rpx 24rpx;
+  font-size: 28rpx;
+}
+
+.material-empty {
+  padding: 40rpx 0;
+  text-align: center;
+
+  .material-empty-text {
+    font-size: 24rpx;
+    color: #999;
   }
 }
 

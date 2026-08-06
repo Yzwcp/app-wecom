@@ -1,6 +1,6 @@
 <template>
   <view class="page">
-    <wd-navbar title="填写结果" left-arrow @click-left="goBack" />
+    <!-- <wd-navbar title="填写结果" left-arrow @click-left="goBack" /> -->
 
     <!-- 页面主体卡片 -->
     <view class="form-container">

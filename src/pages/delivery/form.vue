@@ -117,8 +117,11 @@
                 placeholder="请输入物品名称"
               />
               <view class="goods-actions">
-                <text class="icon-edit" @click="editItem(index)">📝</text>
-                <text class="icon-delete" @click="deleteItem(index)">🗑️</text>
+                <text
+                  class="goods-action-btn goods-action-delete"
+                  @click="deleteItem(index)"
+                  >删除</text
+                >
               </view>
             </view>
 
@@ -624,14 +627,21 @@ const handleSubmit = async () => {
 
       .goods-actions {
         display: flex;
-        gap: 24rpx;
-        font-size: 32rpx;
+        align-items: center;
+        gap: 16rpx;
+        flex-shrink: 0;
 
-        .icon-edit {
+        .goods-action-btn {
+          font-size: 24rpx;
           color: #0062ff;
+          padding: 6rpx 20rpx;
+          border: 2rpx solid #0062ff;
+          border-radius: 8rpx;
+          line-height: 1.2;
         }
-        .icon-delete {
+        .goods-action-delete {
           color: #ee0a24;
+          border-color: #ee0a24;
         }
       }
     }

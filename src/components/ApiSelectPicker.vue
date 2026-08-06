@@ -1,6 +1,6 @@
 <template>
   <view class="api-select">
-    <view class="api-select__inner" @click="open">
+    <view v-if="!hideInner" class="api-select__inner" @click="open">
       <text v-if="displayLabel" class="api-select__text">{{
         displayLabel
       }}</text>
@@ -14,7 +14,7 @@
       :title="title"
       :type="type"
       :loading="loading"
-      v-model:visible="visible"
+      v-model:visible="innerVisible"
       @confirm="onConfirm"
       @cancel="onCancel"
     />
@@ -46,11 +46,19 @@ const props = defineProps({
   params: { type: Object, default: () => ({}) },
   /** 是否分页接口（自动从响应中提取 records） */
   paginated: { type: Boolean, default: false },
+  /** 预设回显文本（选项未加载时展示，用于外部带入的值） */
+  label: { type: String, default: "" },
+  /** 是否隐藏内置触发框（由外部 v-model:visible 控制弹出） */
+  hideInner: { type: Boolean, default: false },
+  /** 外部控制弹出层显隐（v-model:visible） */
+  visible: { type: Boolean, default: false },
+  /** 自定义选项 label 格式化函数 (item) => string，优先级高于 labelKey */
+  labelFormat: { type: Function, default: null },
 });
 
-const emit = defineEmits(["update:modelValue", "confirm"]);
+const emit = defineEmits(["update:modelValue", "confirm", "update:visible"]);
 
-const visible = ref(false);
+const innerVisible = ref(false);
 const loading = ref(false);
 const rawOptions = ref([]);
 const innerValue = ref(props.modelValue);
@@ -67,9 +75,32 @@ watch(
   },
 );
 
+// 外部控制弹出
+watch(
+  () => props.visible,
+  (val) => {
+    if (val) {
+      innerValue.value = props.modelValue;
+      if (!loaded) {
+        fetchOptions();
+      }
+      innerVisible.value = true;
+    }
+  },
+);
+
+// 弹出层关闭时同步给外部
+watch(innerVisible, (val) => {
+  if (!val && props.visible) {
+    emit("update:visible", false);
+  }
+});
+
 const options = computed(() => {
   return rawOptions.value.map((item) => ({
-    label: item[props.labelKey] ?? item,
+    label: props.labelFormat
+      ? props.labelFormat(item)
+      : (item[props.labelKey] ?? item),
     value: item[props.valueKey] ?? item,
   }));
 });
@@ -82,10 +113,11 @@ const displayLabel = computed(() => {
         return item ? item.label : "";
       })
       .filter(Boolean);
-    return labels.join("、") || "";
+    return labels.join("、") || props.label;
   }
   const item = options.value.find((c) => c.value === innerValue.value);
-  return item ? item.label : "";
+  // 选项未加载时，使用外部预设的 label 回显
+  return item ? item.label : props.label;
 });
 
 function buildParams() {
@@ -133,7 +165,8 @@ function open() {
   if (!loaded) {
     fetchOptions();
   }
-  visible.value = true;
+  innerVisible.value = true;
+  emit("update:visible", true);
 }
 
 function onConfirm(data) {

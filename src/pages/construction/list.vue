@@ -91,16 +91,17 @@
 
         <!-- 底部操作按钮 -->
         <view class="action-bar">
-          <button
+          <!-- <button
             class="btn btn-outline"
             @click="handleAction('supplement', item)"
           >
             补充资料
-          </button>
+          </button> -->
           <button
             class="btn btn-primary"
             style="background-color: #ff7043"
             @click="goToDelivery(item)"
+            v-if="item.status === 'COMPLETED'"
           >
             发货
           </button>
@@ -168,10 +169,10 @@ const tabsList = computed(() => dictMap["WJ_TASK_STATUS"] || []);
 
 // 状态值到 CSS 类名的映射（根据实际字典值调整）
 const STATUS_VISUAL_MAP = {
-  pending: "pending",
-  progress: "progress",
-  audit: "audit",
-  completed: "completed",
+  UNPUBLISHED: "unpublished",
+  EXECUTING: "executing",
+  PENDING_AUDIT: "audit",
+  COMPLETED: "completed",
 };
 
 function mapStatusClass(businessStatus) {
@@ -202,7 +203,7 @@ async function fetchList(isReset = false) {
   }
   // 状态筛选
   if (activeTab.value !== "all") {
-    params.businessStatus = activeTab.value;
+    params.status = activeTab.value;
   }
 
   try {
@@ -357,20 +358,20 @@ onLoad(async (options) => {
   overflow: hidden;
 
   /* 动态状态边框色 */
-  &.status-border-pending {
-    border-color: #d6e4ff;
+  &.status-border-unpublished {
+    border-color: #eceef0;
   }
-  &.status-border-progress {
-    border-color: #ffe8d6;
-  }
-  &.status-border-completed {
-    border-color: #d2f4e8;
+  &.status-border-executing {
+    border-color: #d7e6ff;
   }
   &.status-border-audit {
-    border-color: #fef3c7;
+    border-color: #fef0d0;
+  }
+  &.status-border-completed {
+    border-color: #d4f5ea;
   }
   &.status-border-other {
-    border-color: #e5e7eb;
+    border-color: #eceef0;
   }
 }
 
@@ -385,17 +386,17 @@ onLoad(async (options) => {
   font-weight: 500;
   border-bottom-left-radius: 24rpx;
 
-  &.status-bg-pending {
-    background: #2979ff;
+  &.status-bg-unpublished {
+    background: #9ca3af;
   }
-  &.status-bg-progress {
-    background: #f2825b;
-  }
-  &.status-bg-completed {
-    background: #2ecc71;
+  &.status-bg-executing {
+    background: #065cf1;
   }
   &.status-bg-audit {
-    background: #f59e0b;
+    background: #faad14;
+  }
+  &.status-bg-completed {
+    background: #33c795;
   }
   &.status-bg-other {
     background: #9ca3af;
@@ -421,25 +422,25 @@ onLoad(async (options) => {
     border-radius: 50%;
     margin-right: 16rpx;
   }
-  .status-dot-pending {
-    background-color: #2979ff;
-    box-shadow: 0 0 8rpx rgba(41, 121, 255, 0.5);
+  .status-dot-unpublished {
+    background-color: #9ca3af;
+    box-shadow: 0 0 8rpx rgba(156, 163, 175, 0.5);
   }
-  .status-dot-progress {
-    background-color: #f2825b;
-    box-shadow: 0 0 8rpx rgba(242, 130, 91, 0.5);
-  }
-  .status-dot-completed {
-    background-color: #2ecc71;
-    box-shadow: 0 0 8rpx rgba(46, 204, 113, 0.5);
+  .status-dot-executing {
+    background-color: #065cf1;
+    box-shadow: 0 0 8rpx rgba(6, 92, 241, 0.5);
   }
   .status-dot-audit {
-    background-color: #f59e0b;
-    box-shadow: 0 0 8rpx rgba(245, 158, 11, 0.5);
+    background-color: #faad14;
+    box-shadow: 0 0 8rpx rgba(250, 173, 20, 0.5);
+  }
+  .status-dot-completed {
+    background-color: #33c795;
+    box-shadow: 0 0 8rpx rgba(51, 199, 149, 0.5);
   }
   .status-dot-other {
     background-color: #9ca3af;
-    box-shadow: none;
+    box-shadow: 0 0 8rpx rgba(156, 163, 175, 0.5);
   }
 
   .customer-name {

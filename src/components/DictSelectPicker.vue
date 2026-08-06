@@ -5,7 +5,7 @@
         displayLabel
       }}</text>
       <text v-else class="dict-select__placeholder">{{ placeholder }}</text>
-      <wd-icon name="arrow" size="14px" color="#999" />
+      <wd-icon v-if="!disabled" name="arrow" size="14px" color="#999" />
     </view>
     <wd-select-picker
       filterable
@@ -34,6 +34,8 @@ const props = defineProps({
   placeholder: { type: String, default: "请选择" },
   /** 单选 radio / 多选 checkbox */
   type: { type: String, default: "radio" },
+  /** 是否禁用选择 */
+  disabled: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(["update:modelValue"]);
@@ -73,7 +75,7 @@ const displayLabel = computed(() => {
 });
 
 function open() {
-  if (closeGuard) return;
+  if (props.disabled || closeGuard) return;
   innerValue.value = props.modelValue;
   visible.value = true;
 }

@@ -1,13 +1,5 @@
 <template>
   <view class="page">
-    <wd-navbar
-      title="合同签署记录"
-      left-arrow
-      fixed
-      placeholder
-      @click-left="goBack"
-    />
-
     <!-- 合同信息头 -->
     <view class="header-card" id="headerTop" v-if="contractName">
       <view class="header-label">合同</view>
@@ -27,7 +19,9 @@
     >
       <view v-for="item in signList" :key="item.id" class="sign-card">
         <!-- 右上角状态标签 -->
-        <view class="status-badge">{{ item.status || "-" }}</view>
+        <view class="status-badge">{{
+          getDictLabel("CONTRACT_SIGN_RECORD_STATUS", item.status) || "-"
+        }}</view>
 
         <view class="card-row">
           <text class="label">合同编号</text>
@@ -35,21 +29,29 @@
         </view>
         <view class="card-grid">
           <view class="grid-item">
-            <text class="label">用章人手机号</text>
-            <text class="value">{{ item.signerMobile || "-" }}</text>
-          </view>
-          <view class="grid-item">
             <text class="label">用章人姓名</text>
             <text class="value">{{ item.signerName || "-" }}</text>
           </view>
+          <view class="grid-item">
+            <text class="label">用章人手机号</text>
+            <text class="value">{{ item.signerMobile || "-" }}</text>
+          </view>
         </view>
-        <view class="card-row">
-          <text class="label">创建时间</text>
-          <text class="value">{{ item.createTime || "-" }}</text>
+        <view class="card-grid">
+          <view class="grid-item">
+            <text class="label">签署时间</text>
+            <text class="value">{{ item.finishTime || "-" }}</text>
+          </view>
+          <view class="grid-item">
+            <text class="label">签署方式</text>
+            <text class="value">{{
+              getDictLabel("CONTRACT_SIGN_MODE", item.signMode) || "-"
+            }}</text>
+          </view>
         </view>
 
         <!-- 底部操作按钮 -->
-        <view class="card-actions">
+        <view class="card-actions" v-if="item.status !== 'COMPLETED'">
           <wd-button
             type="danger"
             plain
@@ -129,6 +131,9 @@ import { ref, nextTick } from "vue";
 import { onLoad } from "@dcloudio/uni-app";
 import { getElementHeight } from "@/utils/tools";
 import { getContractSignPage, contractSignVoid, contractSignUrge } from "@/api";
+import { useDict } from "@/hooks/useDict";
+
+const { getDictLabel } = useDict();
 
 const contractId = ref("");
 const contractName = ref("");
@@ -325,11 +330,11 @@ function onUrgeSign(item) {
   }
 
   .label {
-    font-size: 26rpx;
+    font-size: 22rpx;
     color: #999;
   }
   .value {
-    font-size: 30rpx;
+    font-size: 24rpx;
     color: #333;
     font-weight: 500;
   }

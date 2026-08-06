@@ -18,6 +18,7 @@
           v-model="activeTab"
           color="#0066ff"
           inactive-color="#666"
+          custom-class="tabs-style"
           @change="handleTabChange"
         >
           <!-- 全部状态 -->
@@ -257,6 +258,9 @@ onLoad(async () => {
 </script>
 
 <style scoped lang="scss">
+.tabs-style {
+  font-size: 22rpx;
+}
 .page {
   width: 100%;
   min-height: 100vh;

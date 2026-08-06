@@ -126,6 +126,20 @@
       }
     },
     {
+      "path": "pages/contract/order/orderList",
+      "style": {
+        "navigationBarTitleText": "合同订单列表",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/contract/order/orderForm",
+      "style": {
+        "navigationBarTitleText": "合同订单表单",
+        "navigationStyle": "custom"
+      }
+    },
+    {
       "path": "pages/login/login",
       "style": {
         "navigationBarTitleText": "登录",

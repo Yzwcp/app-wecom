@@ -1,6 +1,6 @@
 <template>
   <view class="page">
-    <wd-navbar title="外出签到" left-arrow @click-left="goBack" />
+    <!-- <wd-navbar title="外出签到" left-arrow @click-left="goBack" /> -->
 
     <view class="content-container">
       <!-- 1. 定位详情模块 -->

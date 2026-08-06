@@ -3,6 +3,7 @@ export * from "./customer";
 export * from "./sys";
 export * from "./construction";
 export * from "./contract";
+export * from "./contractOrder";
 export * from "./task";
 export * from "./outwork";
 export * from "./delivery";

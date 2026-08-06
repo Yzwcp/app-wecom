@@ -1,12 +1,12 @@
 <template>
   <view class="page">
-    <wd-navbar
+    <!-- <wd-navbar
       :title="navTitle"
       left-arrow
       fixed
       placeholder
       @click-left="goBack"
-    />
+    /> -->
 
     <view class="form-container">
       <!-- 1. 客户基础信息（静态） -->
@@ -48,6 +48,7 @@
             v-model="form.contractName"
             placeholder="请输入合同标题"
             no-border
+            :disabled="viewMode"
             custom-class="form-input-bg"
           />
         </view>
@@ -74,6 +75,24 @@
             v-model="form.contractType"
             dict-key="WJ_PROJECT_SERVICE"
             title="选择合同类型"
+            :disabled="viewMode"
+          />
+        </view>
+
+        <!-- 关联外出记录 -->
+        <view class="field-block">
+          <view class="field-lbl">外出记录</view>
+          <ApiSelectPicker
+            v-model="form.outworkId"
+            :api="getOutworkPage"
+            paginated
+            :params="{ customerId: form.customerId, status: 'COMPLETED' }"
+            label-key="customerName"
+            value-key="outworkId"
+            :label="form.outworkId ? form.customerName : ''"
+            title="选择外出记录"
+            placeholder="请选择外出记录"
+            :disabled="viewMode"
           />
         </view>
 
@@ -127,11 +146,30 @@
             accept="all"
             :extension="['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png']"
             :size-limit="10"
+            :readonly="viewMode"
           />
-          <text class="upload-tip"
+          <text v-if="!viewMode" class="upload-tip"
             >请上传Office软件导出的合同文件，支持 PDF、Word、单个文件不超过
             10MB。</text
           >
+        </view>
+
+        <!-- 签署文件（详情中已电签完成时展示） -->
+        <view v-if="signedFileUrl" class="field-block">
+          <view class="field-lbl">签署文件</view>
+          <view class="sign-file-box">
+            <view class="sign-file-url" @click="openSignFile">
+              <text class="sign-file-text">{{ signedFileUrl }}</text>
+            </view>
+            <view class="sign-file-actions">
+              <wd-button size="small" plain @click="copySignFile"
+                >复制链接</wd-button
+              >
+              <wd-button size="small" type="primary" @click="openSignFile"
+                >打开</wd-button
+              >
+            </view>
+          </view>
         </view>
 
         <!-- 备注 -->
@@ -142,13 +180,14 @@
             type="textarea"
             placeholder="请输入合同备注"
             no-border
+            :disabled="viewMode"
             custom-class="form-input-bg textarea-h"
           />
         </view>
       </view>
 
       <!-- 底部提示区 -->
-      <view class="info-alert-bar">
+      <view v-if="!viewMode" class="info-alert-bar">
         <wd-icon name="info-circle" size="16px" color="#0066ff" />
         <text class="alert-text"
           >提交后合同将进入"待审核"状态。审核通过后，该客户的状态将自动更新为"已签约"。</text
@@ -157,7 +196,7 @@
     </view>
 
     <!-- 底部固定的提交按钮 -->
-    <view class="bottom-action-bar">
+    <view v-if="!viewMode" class="bottom-action-bar">
       <wd-button
         type="primary"
         class="btn-item"
@@ -185,12 +224,16 @@ import {
   editContract,
   getContractDetail,
   getNextContractNo,
+  getOutworkPage,
 } from "@/api";
 import ImgUpload from "@/components/ImgUpload.vue";
 import DictSelectPicker from "@/components/DictSelectPicker.vue";
+import ApiSelectPicker from "@/components/ApiSelectPicker.vue";
 import { onLoad } from "@dcloudio/uni-app";
 
 const navTitle = ref("创建合同");
+// 只读查看模式（详情）
+const viewMode = ref(false);
 // 编辑模式下的合同ID（为空表示新建）
 const contractId = ref("");
 
@@ -201,6 +244,7 @@ const form = ref({
   contractName: "",
   signDate: "",
   contractType: "",
+  outworkId: "",
   effectiveStartTime: "",
   effectiveEndTime: "",
   contractFileId: "",
@@ -209,6 +253,8 @@ const form = ref({
 
 // 合同文件 URL（展示用），ID 通过 update:fileId 回写到 form.contractFileId
 const contractFileUrl = ref("");
+// 电签签署文件链接（详情中已签署时展示）
+const signedFileUrl = ref("");
 const submitLoading = ref(false);
 
 // 日期选择
@@ -224,10 +270,17 @@ onLoad(() => {
     contractId.value = op.id;
     navTitle.value = "编辑合同";
     loadContractDetail(op.id);
+  } else if (op.mode === "view") {
+    // 查看详情：只读模式
+    contractId.value = op.id;
+    viewMode.value = true;
+    navTitle.value = "合同详情";
+    loadContractDetail(op.id);
   } else {
-    // 新建模式：op.id 为客户ID，预生成合同编号
+    // 新建模式：op.id 为客户ID，预生成合同编号，op.outworkId 为关联外出记录
     form.value.customerId = op.id;
     form.value.customerName = decodeURIComponent(op.name || "");
+    form.value.outworkId = op.outworkId || "";
     loadNextContractNo();
   }
 });
@@ -268,9 +321,41 @@ async function loadContractDetail(id) {
     };
     // 回显合同文件列表
     contractFileUrl.value = contract.contractFileUrl || "";
+    // 回显电签签署文件链接
+    signedFileUrl.value = contract.signedFileUrl || "";
   } catch (e) {
     uni.showToast({ title: "合同详情加载失败", icon: "none" });
   }
+}
+
+// 复制签署文件链接
+function copySignFile() {
+  if (!signedFileUrl.value) return;
+  uni.setClipboardData({
+    data: signedFileUrl.value,
+    success: () => {
+      uni.showToast({ title: "已复制签署链接", icon: "none" });
+    },
+  });
+}
+
+// 打开签署文件链接：H5/App 直接打开，小程序复制后提示浏览器打开
+function openSignFile() {
+  if (!signedFileUrl.value) return;
+  // #ifdef H5
+  window.open(signedFileUrl.value, "_blank");
+  // #endif
+  // #ifdef APP-PLUS
+  plus.runtime.openURL(signedFileUrl.value);
+  // #endif
+  // #ifndef H5 || APP-PLUS
+  uni.setClipboardData({
+    data: signedFileUrl.value,
+    success: () => {
+      uni.showToast({ title: "链接已复制，请在浏览器中打开", icon: "none" });
+    },
+  });
+  // #endif
 }
 
 function goBack() {
@@ -278,6 +363,7 @@ function goBack() {
 }
 
 function openDatePicker(key) {
+  if (viewMode.value) return;
   activeDateKey.value = key;
   datePickerShow.value = true;
 }
@@ -313,6 +399,7 @@ function submitForm() {
     contractName: form.value.contractName,
     signDate: form.value.signDate,
     contractType: form.value.contractType || undefined,
+    outworkId: form.value.outworkId || undefined,
     effectiveStartTime: form.value.effectiveStartTime || undefined,
     effectiveEndTime: form.value.effectiveEndTime || undefined,
     contractFileId: form.value.contractFileId,
@@ -464,6 +551,25 @@ function submitForm() {
   color: #999;
   margin-top: 10rpx;
   display: block;
+}
+
+/* 签署文件展示 */
+.sign-file-box {
+  background-color: #f7f8fa;
+  border-radius: 12rpx;
+  padding: 20rpx 24rpx;
+  .sign-file-url {
+    .sign-file-text {
+      font-size: 26rpx;
+      color: #0066ff;
+      word-break: break-all;
+    }
+  }
+  .sign-file-actions {
+    display: flex;
+    gap: 16rpx;
+    margin-top: 16rpx;
+  }
 }
 
 /* 蓝底状态告知提示条 */

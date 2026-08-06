@@ -42,7 +42,12 @@
       :lower-threshold="100"
       @scrolltolower="handleScrollToLower"
     >
-      <view v-for="item in contractList" :key="item.id" class="contract-card">
+      <view
+        v-for="item in contractList"
+        @click="goDetail(item)"
+        :key="item.id"
+        class="contract-card"
+      >
         <!-- 右上角状态标签 -->
         <view :class="['status-badge', getStatusClass(item.status)]">
           {{ getStatusText(item.status) }}
@@ -79,32 +84,42 @@
         <!-- 底部操作按钮 -->
         <view class="card-actions">
           <wd-button
-            v-if="getStatusText(item.status) === '草稿'"
-            type="error"
-            plain
+            v-if="item.status === 'DRAFT'"
             size="small"
+            plain
+            type="info"
             class="mgr-16"
-            @click="goEdit(item)"
-            >继续编辑</wd-button
+            @click.stop="goEdit(item)"
+            >编辑</wd-button
           >
           <wd-button
             type="warning"
             plain
             size="small"
             class="mgr-16"
-            @click="goSignRecord(item)"
+            @click.stop="goSignRecord(item)"
             >签署记录</wd-button
           >
           <wd-button
+            v-if="item.status === 'DRAFT'"
             type="primary"
             size="small"
             class="mgr-16"
-            @click="openSignModal(item)"
+            @click.stop="openSignModal(item)"
             >发起电签</wd-button
           >
-          <wd-button type="primary" size="small" @click="goDetail(item)"
-            >查看详情</wd-button
+          <wd-button
+            v-if="item.status === 'EFFECTIVE'"
+            type="success"
+            plain
+            size="small"
+            class="mgr-16"
+            @click.stop="goOrderList(item)"
+            >订单列表</wd-button
           >
+          <!-- <wd-button type="primary" size="small" 
+            >查看详情</wd-button
+          > -->
         </view>
       </view>
 
@@ -240,10 +255,10 @@ function handleSearch() {
   fetchList(true);
 }
 
-// 查看详情
+// 查看详情（只读模式）
 function goDetail(item) {
   uni.navigateTo({
-    url: `/pages/contract/form?id=${item.id}&mode=edit&name=${encodeURIComponent(item.customerName || "")}`,
+    url: `/pages/contract/form?id=${item.id}&mode=view&name=${encodeURIComponent(item.customerName || "")}`,
   });
 }
 
@@ -251,6 +266,13 @@ function goDetail(item) {
 function goSignRecord(item) {
   uni.navigateTo({
     url: `/pages/contract/signRecord?contractId=${item.id}&name=${encodeURIComponent(item.customerName || "")}`,
+  });
+}
+
+// 合同订单列表
+function goOrderList(item) {
+  uni.navigateTo({
+    url: `/pages/contract/order/orderList?contractId=${item.id}&customerId=${item.customerId || ""}&name=${encodeURIComponent(item.customerName || "")}`,
   });
 }
 

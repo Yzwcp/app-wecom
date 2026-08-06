@@ -5,15 +5,15 @@
 
     <!-- 1. 搜索与状态栏 -->
     <view class="header-box">
-      <view class="search-bar">
+      <view class="search-bar" @click="pickerVisible = true">
         <text class="uni-icons-search"></text>
-        <input
-          class="search-input"
-          type="text"
-          v-model="searchKeyword"
-          placeholder="搜索客户名称或地址"
-          @input="onSearch"
-        />
+        <text
+          :class="[
+            'search-text',
+            selectedOutwork ? 'search-text-value' : 'search-text-placeholder',
+          ]"
+          >{{ selectedOutworkLabel }}</text
+        >
       </view>
       <view class="status-tags">
         <view
@@ -50,6 +50,19 @@
       ></image>
     </view>
 
+    <!-- 拜访记录搜索选择器（隐藏触发框，由搜索栏点击弹出） -->
+    <ApiSelectPicker
+      hide-inner
+      v-model="selectedOutworkId"
+      v-model:visible="pickerVisible"
+      :api="getOutworkMap"
+      :label-format="pickLabelFormat"
+      value-key="outworkId"
+      title="选择拜访记录"
+      placeholder="请选择"
+      @confirm="onPickOutwork"
+    />
+
     <!-- 4. 底部详细信息弹窗卡片 -->
     <view
       class="detail-card"
@@ -64,23 +77,43 @@
       </view>
 
       <view class="info-line">
-        <text class="icon-location">📍</text>
+        <image
+          class="info-icon"
+          src="/static/map/map.png"
+          mode="aspectFit"
+        ></image>
         <text class="info-text">{{ activeVisit.address }}</text>
       </view>
       <view class="info-line">
-        <text class="icon-time">🕒</text>
+        <image
+          class="info-icon"
+          src="/static/map/time.png"
+          mode="aspectFit"
+        ></image>
         <text class="info-text">计划时间 {{ activeVisit.planTime }}</text>
       </view>
 
       <!-- 底部操作按钮 -->
       <view class="action-buttons">
-        <button class="btn btn-outline" @tap="handleSignIn(activeVisit)">
+        <button
+          class="btn btn-outline"
+          v-if="activeVisit.status === 'PENDING'"
+          @tap="handleSignIn(activeVisit)"
+        >
           签到
         </button>
-        <button class="btn btn-primary" @tap="handleFillResult(activeVisit)">
+        <button
+          class="btn btn-primary"
+          v-if="activeVisit.status === 'SIGNED_IN'"
+          @tap="handleFillResult(activeVisit)"
+        >
           填写结果
         </button>
-        <button class="btn btn-danger" @tap="handleCreateContract(activeVisit)">
+        <button
+          class="btn btn-danger"
+          v-if="activeVisit.status === 'COMPLETED'"
+          @tap="handleCreateContract(activeVisit)"
+        >
           转创建合同
         </button>
       </view>
@@ -96,6 +129,7 @@ import { storeToRefs } from "pinia";
 import { getLocation } from "@/utils/wx";
 import { getOutworkMap } from "@/api/outwork";
 import { useDict } from "@/hooks/useDict";
+import ApiSelectPicker from "@/components/ApiSelectPicker.vue";
 
 const { dictMap, getDictLabel } = useDict();
 
@@ -104,9 +138,13 @@ const { systemInfo, configInfo, userInfo } = storeToRefs(global);
 
 const query = ref({});
 const params = ref({});
-const searchKeyword = ref("");
 const showCard = ref(false); // 控制卡片显示
 const activeVisit = ref(null); // 当前选中的拜访点
+
+// 拜访记录搜索选择器状态
+const pickerVisible = ref(false);
+const selectedOutwork = ref(null); // 当前选中的拜访记录
+const selectedOutworkId = ref("");
 
 // 地图中心点（默认定位，如杭州）
 const mapCenter = ref({
@@ -119,15 +157,11 @@ const currentLocation = ref(null);
 
 // 状态标签定义
 const statusTypes = ref([
-  { label: "待外出", icon: "/static/icons/time.png" },
-  { label: "执行中", icon: "/static/icons/play.png" },
-  { label: "已成交", icon: "/static/icons/check.png" },
-  { label: "未成交", icon: "/static/icons/close.png" },
-  { label: "已转合同", icon: "/static/icons/sync.png" },
+  { label: "待外出", icon: "/static/map/PENDING_SMALL.png" },
+  { label: "已签到", icon: "/static/map/SIGNED_IN_SMALL.png" },
+  { label: "已成交", icon: "/static/map/COMPLETED_SMALL.png" },
+  { label: "已转合同", icon: "/static/map/CONVERTED_SMALL.png" },
 ]);
-
-// 状态对应的标记图标
-const markerIcon = "/static/map/map-icon.png";
 
 // 外勤列表数据
 const allList = ref([]);
@@ -135,10 +169,9 @@ const allList = ref([]);
 // 状态 CSS class 映射
 const STATUS_CLASS_MAP = {
   PENDING: "status-pending",
-  PROCESSING: "status-executing",
+  SIGNED_IN: "status-signed",
   COMPLETED: "status-completed",
-  FAILED: "status-failed",
-  CONTRACTED: "status-contracted",
+  CONVERTED: "status-converted",
 };
 
 // 加载外勤地图数据
@@ -161,9 +194,9 @@ async function loadOutworkMap() {
         statusText: item.statusName,
         statusClass: STATUS_CLASS_MAP[item.status] || "status-pending",
         outworkType: item.outworkType,
-        iconPath: markerIcon,
-        width: 32,
-        height: 40,
+        iconPath: `/static/map/${item.status}.png`,
+        width: 36,
+        height: 36,
       }));
     console.log(allList.value);
   } catch (err) {
@@ -197,10 +230,31 @@ const mapMarkers = computed(() => {
   return markers;
 });
 
-// 搜索逻辑
-function onSearch() {
-  console.log("搜索关键词:", searchKeyword.value);
-  // 实际业务中在此处过滤 allList 或重新请求接口
+// 搜索栏展示文本
+const selectedOutworkLabel = computed(() => {
+  if (!selectedOutwork.value) return "搜索客户名称或地址";
+  const name = selectedOutwork.value.customerName || "";
+  const address = selectedOutwork.value.address || "";
+  return address ? `${name}（${address}）` : name;
+});
+
+// 选择器选项 label 格式化（名称 + 地址，支持按两者搜索）
+function pickLabelFormat(item) {
+  const name = item.customerName || "";
+  const address = item.address || "";
+  return address ? `${name}（${address}）` : name;
+}
+
+// 选择拜访记录后地图居中到对应地址
+function onPickOutwork(item) {
+  if (!item) return;
+  selectedOutwork.value = item;
+  const matched = allList.value.find((m) => m.outworkId === item.outworkId);
+  const lat = matched?.latitude || item.latitude;
+  const lng = matched?.longitude || item.longitude;
+  if (lat && lng) {
+    mapCenter.value = { latitude: lat, longitude: lng };
+  }
 }
 
 function goBack() {
@@ -242,7 +296,9 @@ function handleFillResult(item) {
 
 function handleCreateContract(item) {
   uni.navigateTo({
-    url: `/pages/contract/create?customerId=${item.customerId}`,
+    url: `/pages/contract/form?id=${item.customerId}&name=${encodeURIComponent(
+      item.customerName || "",
+    )}&outworkId=${item.outworkId}`,
   });
 }
 
@@ -341,11 +397,19 @@ onLoad(() => {
     align-items: center;
     margin-bottom: 16rpx;
 
-    .search-input {
-      font-size: 28rpx;
-      color: #333;
+    .search-text {
       flex: 1;
+      font-size: 28rpx;
       margin-left: 12rpx;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .search-text-placeholder {
+      color: #999;
+    }
+    .search-text-value {
+      color: #333;
     }
   }
 
@@ -413,25 +477,21 @@ onLoad(() => {
       padding: 4rpx 16rpx;
       border-radius: 8rpx;
 
-      &.status-executing {
-        background-color: #e8f2ff;
-        color: #2f7fff;
-      }
       &.status-pending {
-        background-color: #fff3e0;
-        color: #ff9800;
+        background-color: #010101;
+        color: #ffffff;
+      }
+      &.status-signed {
+        background-color: #065cf1;
+        color: #ffffff;
       }
       &.status-completed {
-        background-color: #e8f5e9;
-        color: #4caf50;
+        background-color: #4fc168;
+        color: #ffffff;
       }
-      &.status-failed {
-        background-color: #fce4ec;
-        color: #e53935;
-      }
-      &.status-contracted {
-        background-color: #f3e5f5;
-        color: #9c27b0;
+      &.status-converted {
+        background-color: #4fc168;
+        color: #ffffff;
       }
     }
   }
@@ -441,12 +501,12 @@ onLoad(() => {
     align-items: flex-start;
     margin-bottom: 16rpx;
 
-    .icon-location,
-    .icon-time {
-      font-size: 28rpx;
-      color: #999;
+    .info-icon {
+      width: 28rpx;
+      height: 28rpx;
       margin-right: 12rpx;
-      margin-top: 2rpx;
+      margin-top: 6rpx;
+      flex-shrink: 0;
     }
 
     .info-text {

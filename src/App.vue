@@ -37,4 +37,7 @@ export default {
 .uni-scroll-view-refresher {
   background-color: rgba(0, 0, 0, 0) !important;
 }
+:root {
+  --wot-tabs-nav-item-font-size: 26rpx;
+}
 </style>
