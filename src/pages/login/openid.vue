@@ -83,6 +83,44 @@ function cleanCodeFromUrl() {
 }
 
 /**
+ * 拿到openid后的登录流程（缓存命中或授权回调共用）
+ */
+async function doLoginByOpenid(openid) {
+  try {
+    uni.showLoading({ title: "登录中...", mask: true });
+
+    globalStore.setOpenid(openid);
+    const { token } = await login({ wxCpOpenid: openid });
+    if (token) globalStore.setToken(token);
+
+    // 并行获取用户信息和菜单
+    const [userRes, menuRes] = await Promise.all([
+      getLoginUser({}),
+      getUserMenu({}),
+    ]);
+
+    // 缓存用户信息
+    globalStore.setUserInfo(userRes);
+
+    // 缓存菜单列表
+    globalStore.setMenuList(menuRes);
+
+    uni.hideLoading();
+
+    // 跳转首页
+    uni.reLaunch({
+      url: "/pages/tab/index",
+    });
+  } catch (err) {
+    uni.hideLoading();
+    console.error("openid登录失败:", err);
+    // 显示错误状态，由用户手动点击"重新授权"，避免无限循环
+    status.value = "error";
+    errorMsg.value = err?.msg || err?.message || "网络异常，请稍后重试";
+  }
+}
+
+/**
  * 用code换取openid并登录
  */
 async function handleOpenidLogin(code) {
@@ -92,34 +130,14 @@ async function handleOpenidLogin(code) {
   try {
     uni.showLoading({ title: "授权登录中...", mask: true });
 
-    // 1. 用code换取token/openid
+    // 用code换取openid
     const openid = await getOpenidByCode({
       code,
       state: "",
     });
 
     if (openid) {
-      globalStore.setOpenid(openid);
-      const { token } = await login({ wxCpOpenid: openid });
-      if (token) globalStore.setToken(token);
-      // 4. 并行获取用户信息和菜单
-      const [userRes, menuRes] = await Promise.all([
-        getLoginUser({}),
-        getUserMenu({}),
-      ]);
-
-      // 5. 缓存用户信息
-      globalStore.setUserInfo(userRes);
-
-      // 6. 缓存菜单列表
-      globalStore.setMenuList(menuRes);
-
-      uni.hideLoading();
-
-      // 7. 跳转首页
-      uni.reLaunch({
-        url: "/pages/tab/index",
-      });
+      await doLoginByOpenid(openid);
     }
   } catch (err) {
     uni.hideLoading();
@@ -145,8 +163,13 @@ function redirectToOAuth() {
 }
 
 onLoad(() => {
+  // 优先取持久化缓存的openid，命中则直接登录，不再走OAuth授权
+  const cachedOpenid = globalStore.openid;
+  if (cachedOpenid) {
+    doLoginByOpenid(cachedOpenid);
+    return;
+  }
   const code = getQueryParam("code");
-  alert(code);
   if (code) {
     // 携带code参数，说明是OAuth回调，直接登录
     handleOpenidLogin(code);

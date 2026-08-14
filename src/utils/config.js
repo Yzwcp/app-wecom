@@ -1,7 +1,5 @@
-//api接口
-// export const baseUrl = 'https://form.win.shengdajia.cn/api'
-// export const baseUrl = "http://10.53.1.25:9003";
-export const baseUrl = "https://nyq.win.shengdajia.cn";
+//api接口（按环境区分：开发读取 .env.development，打包读取 .env.production）
+export const baseUrl = import.meta.env.VITE_BASE_URL;
 
 export const imageUrl = "https://tbwork.shengdajia.cn/public";
 // export const requestType = 'client'

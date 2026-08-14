@@ -1,7 +1,8 @@
 {
   "scripts": {
     "dev:h5": "uni dev h5",
-    "build:h5": "uni build h5"
+    "build:h5": "uni build h5",
+    "pub": "deploy prod"
   },
   "dependencies": {
     "@dcloudio/uni-app": "3.0.0-alpha-5020120260710001",
