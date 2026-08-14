@@ -28,7 +28,11 @@
         @change="handleTabChange"
       >
         <wd-tab title="全部" name="all"></wd-tab>
-        <wd-tab title="未读" name="unread"></wd-tab>
+        <wd-tab
+          title="未读"
+          name="unread"
+          :badge-props="{ value: unreadTotal, max: 99, type: 'danger' }"
+        ></wd-tab>
       </wd-tabs>
     </view>
 
@@ -51,7 +55,7 @@
         >
           <!-- 左侧类型专属图标 -->
           <view class="icon-wrap">
-            <view v-if="msg.unreadCount > 0" class="unread-dot"></view>
+            <view v-if="msg.isRead === 0" class="unread-dot"></view>
             <view class="icon-circle" :class="msg.typeClass || 'bg-blue'">
               <wd-icon
                 :name="msg.iconName || 'notification'"
@@ -91,6 +95,7 @@
 
 <script setup>
 import { ref, onMounted } from "vue";
+import { onShow } from "@dcloudio/uni-app";
 import { getMessagePage, getUnreadCount, markAllAsRead } from "@/api";
 
 // 当前选中的标签：'all' 全部，'unread' 未读
@@ -110,10 +115,8 @@ const unreadTotal = ref(0);
 
 // 根据后端数据构建前端展示字段
 function formatMessage(item) {
-  const hasUnread = item.isRead === 0;
   return {
     ...item,
-    unreadCount: hasUnread ? 1 : 0,
     iconName: item.iconName || getIconByType(item.type),
     typeClass: item.typeClass || getTypeClassByType(item.type),
     createTime: item.createTime || item.time,
@@ -221,15 +224,25 @@ function handleTabChange({ name }) {
 
 // 点击消息卡片跳转详情
 function handleMessageClick(msg) {
-  uni.navigateTo({
+  // 记录原始已读状态，用于详情页判断是否需要调用已读接口
+  const originIsRead = msg.isRead;
+
+  // 点击时立即本地标记为已读，避免返回列表时红点残留
+  if (msg.isRead === 0) {
+    msg.isRead = 1;
+    if (unreadTotal.value > 0) {
+      unreadTotal.value -= 1;
+    }
+  }
+  uni.$router.push({
     url: "/pages/message/detail",
-    params: {
+    query: {
       id: msg.id,
       title: msg.title,
       content: msg.content || msg.description,
       createTime: msg.createTime || msg.time,
       type: msg.type,
-      isRead: msg.isRead,
+      isRead: originIsRead,
     },
   });
 }
@@ -239,7 +252,6 @@ async function handleMarkAllRead() {
   try {
     await markAllAsRead();
     messageList.value.forEach((msg) => {
-      msg.unreadCount = 0;
       msg.isRead = 1;
     });
     unreadTotal.value = 0;
@@ -263,6 +275,12 @@ function goBack() {
 onMounted(() => {
   fetchList(true);
   fetchUnreadCount();
+});
+
+// 从详情页返回时刷新列表和未读数，确保状态同步
+onShow(() => {
+  // fetchList(true);
+  // fetchUnreadCount();
 });
 </script>
 

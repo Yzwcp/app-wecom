@@ -5,7 +5,6 @@
     :limit="limit"
     :disabled="disabled || readonly"
     :accept="accept"
-    :extension="extension"
     :max-size="maxSize"
     reupload
     :upload-method="customUpload"
