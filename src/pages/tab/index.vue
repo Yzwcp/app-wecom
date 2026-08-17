@@ -39,7 +39,7 @@
               <view class="item-label text-blue">我的客户</view>
               <view class="item-value text-blue">
                 <wd-count-to
-                  :end-val="workData.customerCount"
+                  :end-val="workData.customerCount || 0"
                   color="#0d47a1"
                   font-size="28px"
                   bold
@@ -66,7 +66,7 @@
               >
               <view class="item-value text-green">
                 <wd-count-to
-                  :end-val="workData.unreadMessageCount"
+                  :end-val="workData.unreadMessageCount || 0"
                   color="#148663"
                   font-size="28px"
                   bold
@@ -201,6 +201,10 @@ onLoad(() => {
 <style scoped lang="scss">
 :deep(.wd-tabbar) {
   background: transparent !important;
+}
+:deep(.wd-count-to__main-text) {
+  font-size: 50rpx !important;
+  font-weight: 700;
 }
 
 .page {

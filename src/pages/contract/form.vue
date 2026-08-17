@@ -12,7 +12,11 @@
       <!-- 1. 客户基础信息（静态） -->
       <view class="section-card info-card">
         <view class="section-header">
-          <wd-icon name="user" size="18px" color="#0066ff" />
+          <image
+            class="icon-user"
+            style="width: 40rpx; height: 40rpx"
+            src="/static/contract/user.png"
+          ></image>
           <text class="section-title">客户信息</text>
         </view>
         <view class="info-list">
@@ -26,7 +30,11 @@
       <!-- 2. 合同详细信息录入 -->
       <view class="section-card">
         <view class="section-header">
-          <wd-icon name="edit-1" size="18px" color="#0066ff" />
+          <image
+            class="icon-user"
+            style="width: 40rpx; height: 40rpx"
+            src="/static/contract/chapter.png"
+          ></image>
           <text class="section-title">合同详情</text>
         </view>
 

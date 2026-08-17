@@ -572,8 +572,8 @@ onLoad(() => {
   z-index: 99;
 
   .locate-icon {
-    width: 40rpx;
-    height: 40rpx;
+    width: 60rpx;
+    height: 60rpx;
   }
 
   &:active {

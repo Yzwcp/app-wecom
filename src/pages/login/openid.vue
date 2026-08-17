@@ -90,8 +90,11 @@ async function doLoginByOpenid(openid) {
     uni.showLoading({ title: "登录中...", mask: true });
 
     globalStore.setOpenid(openid);
-    const { token } = await login({ wxCpOpenid: openid });
-    if (token) globalStore.setToken(token);
+    const loginRes = await login({ wxCpOpenid: openid });
+
+    console.log("loginRes", loginRes);
+
+    if (loginRes.token) globalStore.setToken(loginRes.token);
 
     // 并行获取用户信息和菜单
     const [userRes, menuRes] = await Promise.all([

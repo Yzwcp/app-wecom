@@ -29,7 +29,8 @@
       <!-- 2. 签收信息表单 -->
       <view class="card form-card">
         <view class="card-title">
-          <text class="icon-user">👤</text>
+          <image class="icon-user" src="/static/delivery/member.png"></image>
+
           <text class="title-text">签收信息</text>
         </view>
 
@@ -86,7 +87,9 @@
       <view class="card list-card">
         <view class="list-card-header">
           <view class="header-left">
-            <view class="blue-dot"></view>
+            <!-- <view class="blue-dot"></view> -->
+            <image class="blue-dot" src="/static/delivery/doc.png"></image>
+
             <text class="title-text">发货清单</text>
           </view>
           <view class="header-right">
@@ -117,11 +120,16 @@
                 placeholder="请输入物品名称"
               />
               <view class="goods-actions">
-                <text
+                <!-- <text
                   class="goods-action-btn goods-action-delete"
-                  @click="deleteItem(index)"
+                 
                   >删除</text
-                >
+                > -->
+                <image
+                  @click="deleteItem(index)"
+                  class="goods-action-btn"
+                  src="/static/delivery/delete.png"
+                ></image>
               </view>
             </view>
 
@@ -550,8 +558,8 @@ const handleSubmit = async () => {
       display: flex;
       align-items: center;
       .blue-dot {
-        width: 30rpx;
-        height: 30rpx;
+        width: 40rpx;
+        height: 40rpx;
         background-color: #0062ff;
         border-radius: 50%;
         margin-right: 16rpx;
@@ -632,12 +640,8 @@ const handleSubmit = async () => {
         flex-shrink: 0;
 
         .goods-action-btn {
-          font-size: 24rpx;
-          color: #0062ff;
-          padding: 6rpx 20rpx;
-          border: 2rpx solid #0062ff;
-          border-radius: 8rpx;
-          line-height: 1.2;
+          width: 30rpx;
+          height: 30rpx;
         }
         .goods-action-delete {
           color: #ee0a24;

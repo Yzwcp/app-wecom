@@ -7,7 +7,10 @@
         <!-- 蓝色标题栏 -->
         <view class="card-header-blue">
           <view class="title-area">
-            <wd-icon name="home" size="20px" color="#ffffff" class="mgr-8" />
+            <image
+              style="width: 40rpx; height: 40rpx; margin-right: 12rpx"
+              src="/static/construction/store.png"
+            ></image>
             <text class="shop-name">{{ task.taskName || "-" }}</text>
           </view>
           <view class="status-badge">{{ getTaskStatusText(task.status) }}</view>
@@ -20,12 +23,10 @@
             <text class="address-detail">{{
               customerBaseInfo.address || "暂无地址"
             }}</text>
-            <wd-icon
-              name="location"
-              size="18px"
-              color="#2979ff"
-              class="loc-icon"
-            />
+            <image
+              style="width: 40rpx; height: 40rpx; margin-right: 12rpx"
+              src="/static/construction/addr.png"
+            ></image>
           </view>
 
           <view class="contact-grid">
@@ -47,12 +48,10 @@
 
           <!-- 任务信息 -->
           <view class="section-sub-title">
-            <wd-icon
-              name="assignment"
-              size="18px"
-              color="#2979ff"
-              class="mgr-6"
-            />
+            <image
+              style="width: 30rpx; height: 30rpx; margin-right: 12rpx"
+              src="/static/construction/task.png"
+            ></image>
             <text>任务信息</text>
           </view>
           <view class="info-data-list">
@@ -80,12 +79,10 @@
 
           <!-- 施工要求 -->
           <view class="section-sub-title">
-            <wd-icon
-              name="error-circle"
-              size="18px"
-              color="#2979ff"
-              class="mgr-6"
-            />
+            <image
+              style="width: 30rpx; height: 30rpx; margin-right: 12rpx"
+              src="/static/construction/requirement.png"
+            ></image>
             <text>施工要求</text>
           </view>
           <view class="requirement-box">
@@ -104,12 +101,10 @@
       <!-- 2. 子任务进度（时间轴） -->
       <view class="panel-card">
         <view class="panel-card-title">
-          <wd-icon
-            name="error-circle"
-            size="18px"
-            color="#2979ff"
-            class="mgr-6"
-          />
+          <image
+            style="width: 30rpx; height: 30rpx; margin-right: 12rpx"
+            src="/static/construction/question.png"
+          ></image>
           <text>子任务进度</text>
         </view>
 
