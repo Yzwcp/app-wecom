@@ -20,58 +20,35 @@
     <!-- 内容主体区域（向上负外边距实现叠加效果） -->
     <view class="content-container">
       <!-- 常用功能模块 -->
-      <view class="card-panel">
+      <view v-if="commonFeatures.length" class="card-panel">
         <view class="panel-title">常用功能</view>
         <view class="grid-two-columns">
-          <!-- 我的客户 -->
           <view
-            class="feature-item client-bg"
-            @click="go('/pages/customer/list')"
+            v-for="item in commonFeatures"
+            :key="item.path"
+            class="feature-item"
+            :class="item.bg"
+            @click="go(item.path)"
           >
-            <view class="icon-wrapper client-icon-box">
+            <view class="icon-wrapper" :class="item.iconBox">
               <image
-                src="/static/index/kehu.png"
+                :src="item.icon"
                 style="width: 100%; height: 100%"
                 mode="scaleToFill"
               />
             </view>
             <view class="info-wrapper">
-              <view class="item-label text-blue">我的客户</view>
-              <view class="item-value text-blue">
-                <wd-count-to
-                  :end-val="workData.customerCount || 0"
-                  color="#0d47a1"
-                  font-size="28px"
-                  bold
-                />
-                <text class="unit">位客户</text>
+              <view class="item-label" :class="item.textColor">
+                {{ item.label }}
               </view>
-            </view>
-          </view>
-
-          <!-- 消息中心 -->
-          <view class="feature-item message-bg">
-            <view class="icon-wrapper message-icon-box">
-              <image
-                src="/static/index/message.png"
-                style="width: 100%; height: 100%"
-                mode="scaleToFill"
-              />
-            </view>
-            <view class="info-wrapper">
-              <view
-                class="item-label text-green"
-                @click="go('/pages/message/message')"
-                >消息中心</view
-              >
-              <view class="item-value text-green">
+              <view class="item-value" :class="item.textColor">
                 <wd-count-to
-                  :end-val="workData.unreadMessageCount || 0"
-                  color="#148663"
+                  :end-val="workData[item.countKey] || 0"
+                  :color="item.countColor"
                   font-size="28px"
                   bold
                 />
-                <text class="unit">条新消息</text>
+                <text class="unit">{{ item.unit }}</text>
               </view>
             </view>
           </view>
@@ -79,80 +56,23 @@
       </view>
 
       <!-- 快捷操作模块 -->
-      <view class="shortcut-section">
+      <view v-if="shortcutFeatures.length" class="shortcut-section">
         <view class="panel-title">快捷操作</view>
         <view class="grid-two-columns">
-          <!-- 今日拜访 -->
           <view
-            class="shortcut-card bg-orange-light"
-            @click="go('/pages/map/map')"
+            v-for="item in shortcutFeatures"
+            :key="item.path"
+            class="shortcut-card"
+            :class="item.bg"
+            @click="go(item.path)"
           >
             <image
-              src="/static/index/1.png"
+              :src="item.icon"
               style="width: 80rpx; height: 80rpx"
               mode="scaleToFill"
             />
-            <text class="shortcut-label">今日拜访</text>
+            <text class="shortcut-label">{{ item.label }}</text>
           </view>
-          <!-- 回访列表 -->
-          <view
-            class="shortcut-card bg-yellow-light"
-            @click="go('/pages/visit/visit')"
-          >
-            <image
-              src="/static/index/2.png"
-              style="width: 80rpx; height: 80rpx"
-              mode="scaleToFill"
-            />
-            <text class="shortcut-label">回访列表</text>
-          </view>
-          <!-- 施工列表 -->
-          <view
-            class="shortcut-card bg-blue-light"
-            @click="go('/pages/construction/list')"
-          >
-            <image
-              src="/static/index/3.png"
-              style="width: 80rpx; height: 80rpx"
-              mode="scaleToFill"
-            />
-            <text class="shortcut-label">施工列表</text>
-          </view>
-          <!-- 合同列表 -->
-          <view
-            class="shortcut-card bg-purple-light"
-            @click="go('/pages/contract/contract')"
-          >
-            <image
-              src="/static/index/4.png"
-              style="width: 80rpx; height: 80rpx"
-              mode="scaleToFill"
-            />
-            <text class="shortcut-label">合同列表</text>
-          </view>
-          <view
-            class="shortcut-card bg-blue-light"
-            @click="go('/pages/delivery/list')"
-          >
-            <image
-              src="/static/index/5.png"
-              style="width: 80rpx; height: 80rpx"
-              mode="scaleToFill"
-            />
-            <text class="shortcut-label">发货管理</text>
-          </view>
-          <!-- <view
-            class="shortcut-card bg-purple-light"s
-            @click="go('/pages/map/map')"
-          >
-            <wd-icon name="certificate" size="32px" color="#ab47bc" />
-            <text class="shortcut-label">地图</text>
-          </view> -->
-          <!-- 获取地理位置 -->
-          <!-- <view class="shortcut-card bg-green-light" @click="getGeoLocation">
-            <wd-icon name="location" size="32px" color="#2e7d32" />
-            <text class="shortcut-label">获取地理位置</text>
-          </view> -->
         </view>
       </view>
     </view>
@@ -160,15 +80,116 @@
 </template>
 
 <script setup>
-import { onLoad, onLaunch } from "@dcloudio/uni-app";
+import { onLoad } from "@dcloudio/uni-app";
 import { workHome } from "@/api/auth";
 import { useGlobalStore } from "@/store/global";
-import { toRefs, ref } from "vue";
-import { getLocation } from "@/utils/wx";
+import { toRefs, ref, computed } from "vue";
 const globalState = useGlobalStore();
-const { userInfo } = toRefs(globalState);
+const { userInfo, menuList } = toRefs(globalState);
 
 const workData = ref({});
+
+// 菜单配置表
+const menuConfig = {
+  "/pages/customer/list": {
+    label: "我的客户",
+    icon: "/static/index/kehu.png",
+    bg: "client-bg",
+    iconBox: "client-icon-box",
+    textColor: "text-blue",
+    countKey: "customerCount",
+    countColor: "#0d47a1",
+    unit: "位客户",
+    section: "common",
+  },
+  "/pages/message/message": {
+    label: "消息中心",
+    icon: "/static/index/message.png",
+    bg: "message-bg",
+    iconBox: "message-icon-box",
+    textColor: "text-green",
+    countKey: "unreadMessageCount",
+    countColor: "#148663",
+    unit: "条新消息",
+    section: "common",
+  },
+  "/pages/map/map": {
+    label: "今日拜访",
+    icon: "/static/index/1.png",
+    bg: "bg-orange-light",
+    section: "shortcut",
+  },
+  "/pages/visit/visit": {
+    label: "回访列表",
+    icon: "/static/index/2.png",
+    bg: "bg-yellow-light",
+    section: "shortcut",
+  },
+  "/pages/construction/list": {
+    label: "施工列表",
+    icon: "/static/index/3.png",
+    bg: "bg-blue-light",
+    section: "shortcut",
+  },
+  "/pages/contract/contract": {
+    label: "合同列表",
+    icon: "/static/index/4.png",
+    bg: "bg-purple-light",
+    section: "shortcut",
+  },
+  "/pages/delivery/list": {
+    label: "发货管理",
+    icon: "/static/index/5.png",
+    bg: "bg-blue-light",
+    section: "shortcut",
+  },
+};
+
+// 判断是否在开发模式下显示全部菜单
+const showAllMenu = computed(() => {
+  return import.meta.env.VITE_SHOW_ALL_MENU === "true";
+});
+
+// 递归获取菜单列表中的所有菜单路径
+function extractMenuPaths(menus) {
+  const paths = [];
+  const traverse = (items) => {
+    if (!Array.isArray(items)) return;
+    items.forEach((item) => {
+      if (item.menuType === "MENU" && item.path) {
+        paths.push(item.path);
+      }
+      if (item.children) {
+        traverse(item.children);
+      }
+    });
+  };
+  traverse(menus);
+  return paths;
+}
+
+// 计算允许显示的菜单路径
+const allowedPaths = computed(() => {
+  if (showAllMenu.value) {
+    return Object.keys(menuConfig);
+  }
+  return extractMenuPaths(menuList.value);
+});
+
+// 常用功能列表
+const commonFeatures = computed(() => {
+  return allowedPaths.value
+    .filter((path) => menuConfig[path]?.section === "common")
+    .map((path) => ({ path, ...menuConfig[path] }));
+});
+
+// 快捷操作列表
+const shortcutFeatures = computed(() => {
+  return allowedPaths.value
+    .filter((path) => menuConfig[path]?.section === "shortcut")
+    .map((path) => ({ path, ...menuConfig[path] }));
+});
+
 async function init() {
   const data = await workHome({});
   workData.value = data;
@@ -179,20 +200,7 @@ function go(url) {
     url: url,
   });
 }
-function go1(url) {
-  uni.navigateTo({
-    url: "/pages/login/openid",
-  });
-  return;
-  window.location.href =
-    "https://open.weixin.qq.com/connect/oauth2/authorize?appid=wxe7e2fa35ea164594&redirect_uri=https%3A%2F%2Fyzw.lanke8.cc%2Fpages%2Fbind%2Findex&response_type=code&scope=snsapi_base&state=2076570178819235842:1784109915480:9520244512a69c2b93351a349677ea7a#wechat_redirect";
-}
-async function getGeoLocation() {
-  const loc = await getLocation();
-  console.log(loc);
 
-  console.log(loc.latitude, loc.longitude);
-}
 onLoad(() => {
   init();
 });

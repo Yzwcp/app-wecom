@@ -70,7 +70,6 @@ export const useGlobalStore = defineStore(
     const clearAll = () => {
       userInfo.value = {};
       token.value = "";
-      openid.value = "";
       menuList.value = [];
     };
 

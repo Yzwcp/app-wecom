@@ -87,6 +87,21 @@
           />
         </view>
 
+        <!-- 签署方式 -->
+        <view class="field-block">
+          <view class="field-lbl">
+            签署方式
+            <text class="red">*</text>
+          </view>
+          <DictSelectPicker
+            v-model="form.signWay"
+            dict-key="CONTRACT_SIGN_WAY"
+            title="选择签署方式"
+            placeholder="请选择签署方式"
+            :disabled="viewMode"
+          />
+        </view>
+
         <!-- 关联外出记录 -->
         <view class="field-block">
           <view class="field-lbl">外出记录</view>
@@ -140,8 +155,8 @@
           </view>
         </view>
 
-        <!-- 合同文件 -->
-        <view class="field-block">
+        <!-- 合同文件（电子签） -->
+        <view v-if="form.signWay === 'ESIGN'" class="field-block">
           <view class="field-lbl">
             合同文件
             <text class="red">*</text>
@@ -159,6 +174,28 @@
           <text v-if="!viewMode" class="upload-tip"
             >请上传Office软件导出的合同文件，支持 PDF、Word、单个文件不超过
             10MB。</text
+          >
+        </view>
+
+        <!-- 纸质合同照片（纸质签） -->
+        <view v-if="form.signWay === 'PAPER'" class="field-block">
+          <view class="field-lbl">
+            纸质合同照片
+            <text class="red">*</text>
+          </view>
+          <ImgUpload
+            v-model="paperFileUrlList"
+            @update:fileId="addPaperFileId"
+            category="WJ_CONTRACT_FILE"
+            :limit="9"
+            accept="image"
+            :extension="['.jpg', '.jpeg', '.png']"
+            :size-limit="10"
+            :readonly="viewMode"
+          />
+          <text v-if="!viewMode" class="upload-tip"
+            >请上传纸质合同照片，支持 JPG、PNG，单个文件不超过 10MB，最多 9
+            张。</text
           >
         </view>
 
@@ -252,15 +289,19 @@ const form = ref({
   contractName: "",
   signDate: "",
   contractType: "",
+  signWay: "",
   outworkId: "",
   effectiveStartTime: "",
   effectiveEndTime: "",
   contractFileId: "",
+  paperFileIdList: [],
   remark: "",
 });
 
 // 合同文件 URL（展示用），ID 通过 update:fileId 回写到 form.contractFileId
 const contractFileUrl = ref("");
+// 纸质合同照片 URL 列表（展示用），ID 列表维护在 form.paperFileIdList
+const paperFileUrlList = ref([]);
 // 电签签署文件链接（详情中已签署时展示）
 const signedFileUrl = ref("");
 const submitLoading = ref(false);
@@ -322,13 +363,17 @@ async function loadContractDetail(id) {
       contractName: contract.contractName || "",
       signDate: contract.signDate || "",
       contractType: contract.contractType || "",
+      signWay: contract.signWay || "",
       effectiveStartTime: contract.effectiveStartTime || "",
       effectiveEndTime: contract.effectiveEndTime || "",
       contractFileId: contract.contractFileId || "",
+      paperFileIdList: contract.paperFileIdList || [],
       remark: contract.remark || "",
     };
     // 回显合同文件列表
     contractFileUrl.value = contract.contractFileUrl || "";
+    // 回显纸质合同照片列表
+    paperFileUrlList.value = contract.paperFileUrlList || [];
     // 回显电签签署文件链接
     signedFileUrl.value = contract.signedFileUrl || "";
   } catch (e) {
@@ -383,6 +428,13 @@ function confirmDate({ value }) {
   form.value[activeDateKey.value] = formatStr;
 }
 
+// 纸质照片多图上传：累加文件 ID 到 paperFileIdList
+function addPaperFileId(fileId) {
+  if (fileId) {
+    form.value.paperFileIdList = [...form.value.paperFileIdList, fileId];
+  }
+}
+
 function submitForm() {
   if (!form.value.customerId) {
     uni.showToast({ title: "缺少客户信息", icon: "none" });
@@ -396,23 +448,42 @@ function submitForm() {
     uni.showToast({ title: "请选择签订日期", icon: "none" });
     return;
   }
-  if (!form.value.contractFileId) {
+  if (!form.value.signWay) {
+    uni.showToast({ title: "请选择签署方式", icon: "none" });
+    return;
+  }
+  if (form.value.signWay === "ESIGN" && !form.value.contractFileId) {
     uni.showToast({ title: "请上传合同文件", icon: "none" });
     return;
   }
+  if (
+    form.value.signWay === "PAPER" &&
+    form.value.paperFileIdList.length === 0
+  ) {
+    uni.showToast({ title: "请上传纸质合同照片", icon: "none" });
+    return;
+  }
+  console.log(form.value);
 
   submitLoading.value = true;
   const params = {
     customerId: form.value.customerId,
+    contractNo: form.value.contractNo || undefined,
     contractName: form.value.contractName,
     signDate: form.value.signDate,
     contractType: form.value.contractType || undefined,
+    signWay: form.value.signWay,
     outworkId: form.value.outworkId || undefined,
     effectiveStartTime: form.value.effectiveStartTime || undefined,
     effectiveEndTime: form.value.effectiveEndTime || undefined,
-    contractFileId: form.value.contractFileId,
     remark: form.value.remark || undefined,
   };
+  // 按签署方式携带对应文件
+  if (form.value.signWay === "ESIGN") {
+    params.contractFileId = form.value.contractFileId;
+  } else if (form.value.signWay === "PAPER") {
+    params.paperFileIdList = form.value.paperFileIdList;
+  }
 
   // 编辑走编辑接口，新建走新增接口
   const request = contractId.value

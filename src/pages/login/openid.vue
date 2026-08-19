@@ -165,9 +165,15 @@ function redirectToOAuth() {
   // #endif
 }
 
-onLoad(() => {
-  // 优先取持久化缓存的openid，命中则直接登录，不再走OAuth授权
-  const cachedOpenid = globalStore.openid;
+onLoad((op) => {
+  // 优先取URL携带的openid参数，直接登录
+  const urlOpenid = getQueryParam("openid");
+  if (urlOpenid) {
+    doLoginByOpenid(urlOpenid);
+    return;
+  }
+  // 其次取持久化缓存的openid，命中则直接登录，不再走OAuth授权
+  const cachedOpenid = globalStore.openid || op?.openid;
   if (cachedOpenid) {
     doLoginByOpenid(cachedOpenid);
     return;
