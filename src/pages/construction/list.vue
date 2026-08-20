@@ -73,7 +73,7 @@
           }}</view>
         </view>
 
-        <!-- 类型 & 计划时间 -->
+        <!-- 类型 & 计划截止时间 -->
         <view class="grid-info-row">
           <view class="info-cell">
             <view class="field-label">类型</view>
@@ -82,7 +82,7 @@
             }}</view>
           </view>
           <view class="info-cell">
-            <view class="field-label">计划时间</view>
+            <view class="field-label">计划截止时间</view>
             <view class="field-value time-value">{{
               item.planFinishTime || "-"
             }}</view>
@@ -470,7 +470,7 @@ onLoad(async (options) => {
   }
 }
 
-/* 左右分栏（类型 & 计划时间） */
+/* 左右分栏（类型 & 计划截止时间） */
 .grid-info-row {
   display: flex;
   margin-bottom: 32rpx;

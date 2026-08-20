@@ -98,10 +98,11 @@
             size="small"
             class="mgr-16"
             @click.stop="goSignRecord(item)"
+            v-if="item.signWay === 'ESIGN'"
             >签署记录</wd-button
           >
           <wd-button
-            v-if="item.status === 'DRAFT'"
+            v-if="item.status === 'DRAFT' && item.signWay === 'ESIGN'"
             type="primary"
             size="small"
             class="mgr-16"

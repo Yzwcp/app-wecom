@@ -12,7 +12,10 @@
         <view class="user-details">
           <text class="username">{{ userInfo.name }}</text>
           <text class="role">{{ userInfo.positionName }}</text>
-          <!-- <text class="date">2026-07-20 周三</text> -->
+          <text class="date">{{ currentDateText }} {{ greeting }}</text>
+        </view>
+        <view class="clear-cache-btn" @click="handleClearCache">
+          <text class="clear-text">清除缓存</text>
         </view>
       </view>
     </view>
@@ -81,13 +84,29 @@
 
 <script setup>
 import { onLoad } from "@dcloudio/uni-app";
-import { workHome } from "@/api/auth";
+import { workHome, logout } from "@/api/auth";
 import { useGlobalStore } from "@/store/global";
 import { toRefs, ref, computed } from "vue";
 const globalState = useGlobalStore();
 const { userInfo, menuList } = toRefs(globalState);
 
 const workData = ref({});
+
+// 当前日期与星期
+const currentDateText = computed(() => {
+  const now = new Date();
+  const pad = (n) => (n < 10 ? "0" + n : n);
+  const weekMap = ["日", "一", "二", "三", "四", "五", "六"];
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} 周${weekMap[now.getDay()]}`;
+});
+
+// 时间段问候语：6:00-11:00 早上好，11:00-18:00 下午好，其余 晚上好
+const greeting = computed(() => {
+  const hour = new Date().getHours();
+  if (hour >= 6 && hour < 11) return "早上好";
+  if (hour >= 11 && hour < 18) return "下午好";
+  return "晚上好";
+});
 
 // 菜单配置表
 const menuConfig = {
@@ -201,6 +220,31 @@ function go(url) {
   });
 }
 
+// 清除缓存并重新登录
+function handleClearCache() {
+  uni.showModal({
+    title: "提示",
+    content: "确定要清除缓存吗？",
+    success({ confirm }) {
+      if (confirm) {
+        logout({})
+          .then(() => {
+            globalState.clearAll();
+            uni.reLaunch({
+              url: "/pages/login/openid",
+            });
+          })
+          .catch(() => {
+            uni.showToast({
+              title: "清除缓存失败",
+              icon: "none",
+            });
+          });
+      }
+    },
+  });
+}
+
 onLoad(() => {
   init();
 });
@@ -240,6 +284,21 @@ onLoad(() => {
 .user-info-box {
   display: flex;
   align-items: center;
+
+  .clear-cache-btn {
+    margin-left: auto;
+    border: 1rpx solid rgba(255, 255, 255, 0.7);
+    border-radius: 999rpx;
+    height: 50rpx;
+    width: 150rpx;
+    line-height: 50rpx;
+    text-align: center;
+    padding-bottom: 6rpx;
+    .clear-text {
+      font-size: 24rpx;
+      color: #ffffff;
+    }
+  }
 
   .avatar {
     width: 130rpx;

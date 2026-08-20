@@ -90,7 +90,7 @@
           src="/static/map/time.png"
           mode="aspectFit"
         ></image>
-        <text class="info-text">计划时间 {{ activeVisit.planTime }}</text>
+        <text class="info-text">计划截止时间 {{ activeVisit.planTime }}</text>
       </view>
 
       <!-- 底部操作按钮 -->
@@ -160,7 +160,7 @@ const statusTypes = ref([
   { label: "待外出", icon: "/static/map/PENDING_SMALL.png" },
   { label: "已签到", icon: "/static/map/SIGNED_IN_SMALL.png" },
   { label: "已成交", icon: "/static/map/COMPLETED_SMALL.png" },
-  { label: "已转合同", icon: "/static/map/CONVERTED_SMALL.png" },
+  // { label: "已转合同", icon: "/static/map/CONVERTED_SMALL.png" },
 ]);
 
 // 外勤列表数据

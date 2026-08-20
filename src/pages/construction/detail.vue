@@ -70,7 +70,7 @@
               }}</text>
             </view>
             <view class="data-row">
-              <text class="data-label">计划时间</text>
+              <text class="data-label">计划截止时间</text>
               <text class="data-value">{{ task.planFinishTime || "-" }}</text>
             </view>
           </view>

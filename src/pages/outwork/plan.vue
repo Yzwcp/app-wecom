@@ -30,12 +30,12 @@
             />
           </view>
 
-          <!-- 外出计划时间 -->
+          <!-- 外出计划截止时间 -->
           <view class="field-item">
-            <view class="field-label required">外出计划时间</view>
+            <view class="field-label required">外出计划截止时间</view>
             <wd-input
               v-model="formData.planTime"
-              placeholder="请选择计划时间"
+              placeholder="请选择计划截止时间"
               no-border
               suffix-icon="calendar"
               readonly
@@ -63,7 +63,7 @@
       :visible="datePickerVisible"
       v-model="datePickerModel"
       type="datetime"
-      title="选择计划时间"
+      title="选择计划截止时间"
       @confirm="onDatePickerConfirm"
       @cancel="datePickerVisible = false"
     />
@@ -83,7 +83,7 @@ const customerName = ref("");
 const submitting = ref(false);
 
 const formData = ref({
-  outworkType: undefined,
+  outworkType: "VISIT",
   planTime: "",
 });
 
@@ -114,7 +114,7 @@ async function handleSubmit() {
     return uni.showToast({ title: "请选择外出类型", icon: "none" });
   }
   if (!formData.value.planTime) {
-    return uni.showToast({ title: "请选择外出计划时间", icon: "none" });
+    return uni.showToast({ title: "请选择外出计划截止时间", icon: "none" });
   }
 
   submitting.value = true;

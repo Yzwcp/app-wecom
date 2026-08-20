@@ -22,3 +22,9 @@ export function outworkConvertToContract(data) {
 export function outworkCreatePlan(data) {
   return post("/wjapp/wjMobile/outwork/create", data);
 }
+export function getOutworkDetail(data) {
+  return get("/wjapp/wjMobile/outwork/detail", data);
+}
+export function submitOutworkReturn(data) {
+  return post("/wjapp/wjMobile/outwork/submitReturn", data);
+}

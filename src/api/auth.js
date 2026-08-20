@@ -22,3 +22,7 @@ export function workHome(data) {
 export function getJsapiTicket(data) {
   return get("/webapp/wx/cp/jsapiTicket", data);
 }
+
+export function logout(data) {
+  return get("/wjapp/auth/cp/doLogout", data);
+}

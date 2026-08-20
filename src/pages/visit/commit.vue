@@ -82,7 +82,7 @@
             <text class="required">*</text>
           </view>
           <wd-input
-            v-model="formData.content"
+            v-model="formData.communicationRecord"
             type="textarea"
             placeholder="请输入回访内容描述"
             no-border
@@ -95,7 +95,7 @@
         <view class="form-section">
           <view class="section-title">问题记录</view>
           <wd-input
-            v-model="formData.problems"
+            v-model="formData.problemRemark"
             type="textarea"
             placeholder="请输入发现的问题记录"
             no-border
@@ -108,7 +108,7 @@
         <view class="form-section">
           <view class="section-title">后续维护计划</view>
           <wd-input
-            v-model="formData.plans"
+            v-model="formData.followUpPlan"
             type="textarea"
             placeholder="请输入后续跟进或维护策略"
             no-border
@@ -144,7 +144,8 @@
 <script setup>
 import { ref, computed } from "vue";
 import { onLoad } from "@dcloudio/uni-app";
-import { addVisitRecord, getVisitRecordDetail } from "@/api";
+import { submitOutworkReturn, getOutworkDetail } from "@/api/outwork";
+import { getCustomerBaseInfo } from "@/api/customer";
 import { useDict } from "@/hooks/useDict";
 
 const { dictMap } = useDict();
@@ -186,11 +187,11 @@ const rateOptions = computed(() =>
 // 满意度评分当前选中值
 const rateLevel = ref("very_satisfied");
 
-// 文本框输入绑定
+// 文本框输入绑定（字段与后端保持一致）
 const formData = ref({
-  content: "",
-  problems: "",
-  plans: "",
+  communicationRecord: "",
+  problemRemark: "",
+  followUpPlan: "",
 });
 
 function goBack() {
@@ -217,23 +218,24 @@ async function submitVisitForm() {
     uni.showToast({ title: "请选择回访时间", icon: "none" });
     return;
   }
-  if (!formData.value.content.trim()) {
+  if (!formData.value.communicationRecord.trim()) {
     uni.showToast({ title: "请填写回访内容", icon: "none" });
     return;
   }
 
   const payload = {
+    taskId: customerInfo.value.id,
     customerId: customerInfo.value.customerId,
     contractId: customerInfo.value.contractId,
     visitTime: formattedVisitTime.value,
     satisfaction: rateLevel.value,
-    content: formData.value.content.trim(),
-    problems: formData.value.problems.trim() || undefined,
-    plans: formData.value.plans.trim() || undefined,
+    communicationRecord: formData.value.communicationRecord.trim(),
+    problemRemark: formData.value.problemRemark.trim() || undefined,
+    followUpPlan: formData.value.followUpPlan.trim() || undefined,
   };
 
   try {
-    await addVisitRecord(payload);
+    await submitOutworkReturn(payload);
     uni.showToast({
       title: "提交成功",
       icon: "success",
@@ -256,7 +258,8 @@ onLoad(async () => {
   if (readonly.value) {
     // 只读模式：加载回访详情
     try {
-      const res = await getVisitRecordDetail({ id: options.id });
+      const res = await getOutworkDetail({ id: options.id });
+      loadCustomerInfo();
       const detail = res.record || {};
       // console.log(detail);
 
@@ -268,22 +271,42 @@ onLoad(async () => {
       customerInfo.value.phone = detail.phone || "";
       formattedVisitTime.value = detail.visitTime || "";
       rateLevel.value = detail.satisfaction || "";
-      formData.value.content = detail.content || "";
-      formData.value.problems = detail.problems || "";
-      formData.value.plans = detail.plans || "";
+      formData.value.communicationRecord =
+        detail.communicationRecord || detail.content || "";
+      formData.value.problemRemark = detail.problemRemark || "";
+      formData.value.followUpPlan = detail.followUpPlan || "";
+      customerInfo.value.id = options.id || "";
+      customerInfo.value.customerId = options.customerId || "";
+      customerInfo.value.contractId = options.contractId || "";
+      customerInfo.value.name = decodeURIComponent(options.name || "");
+      customerInfo.value.contact = decodeURIComponent(options.contact || "");
+      customerInfo.value.phone = options.phone || "";
+      loadCustomerInfo();
     } catch (error) {
       console.error("获取回访详情失败", error);
       uni.showToast({ title: "获取详情失败", icon: "none" });
     }
   } else {
-    customerInfo.value.id = options.id || "";
-    customerInfo.value.customerId = options.customerId || "";
-    customerInfo.value.contractId = options.contractId || "";
-    customerInfo.value.name = decodeURIComponent(options.name || "");
-    customerInfo.value.contact = decodeURIComponent(options.contact || "");
-    customerInfo.value.phone = options.phone || "";
   }
 });
+
+// 加载客户基础信息
+async function loadCustomerInfo() {
+  if (!customerInfo.value.customerId) return;
+  try {
+    const res = await getCustomerBaseInfo({
+      id: customerInfo.value.customerId,
+    });
+    if (res) {
+      customerInfo.value.name = res.customerName || customerInfo.value.name;
+      customerInfo.value.contact =
+        res.contactName || customerInfo.value.contact;
+      customerInfo.value.phone = res.contactPhone || customerInfo.value.phone;
+    }
+  } catch (error) {
+    console.error("获取客户信息失败", error);
+  }
+}
 </script>
 
 <style scoped lang="scss">

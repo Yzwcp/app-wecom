@@ -107,12 +107,13 @@
           <view class="field-lbl">外出记录</view>
           <ApiSelectPicker
             v-model="form.outworkId"
+            :labelFormat="labelFormat"
             :api="getOutworkPage"
             paginated
             :params="{ customerId: form.customerId, status: 'COMPLETED' }"
             label-key="customerName"
-            value-key="outworkId"
-            :label="form.outworkId ? form.customerName : ''"
+            value-key="id"
+            :label="outworkLabel"
             title="选择外出记录"
             placeholder="请选择外出记录"
             :disabled="viewMode"
@@ -270,6 +271,7 @@ import {
   getContractDetail,
   getNextContractNo,
   getOutworkPage,
+  getOutworkDetail,
 } from "@/api";
 import ImgUpload from "@/components/ImgUpload.vue";
 import DictSelectPicker from "@/components/DictSelectPicker.vue";
@@ -310,14 +312,15 @@ const submitLoading = ref(false);
 const datePickerShow = ref(false);
 const activeDateKey = ref("");
 const currentDateVal = ref(new Date().getTime());
-
+let mode = ref("create");
 onLoad(() => {
   const op = uni.$router.query;
-
+  mode.value = op.mode || "create";
   if (op.mode === "edit") {
     // 编辑模式：加载合同详情回显
     contractId.value = op.id;
     navTitle.value = "编辑合同";
+
     loadContractDetail(op.id);
   } else if (op.mode === "view") {
     // 查看详情：只读模式
@@ -330,6 +333,12 @@ onLoad(() => {
     form.value.customerId = op.id;
     form.value.customerName = decodeURIComponent(op.name || "");
     form.value.outworkId = op.outworkId || "";
+
+    // 已关联外出记录时，拉取详情用于回显 label
+    if (form.value.outworkId) {
+      loadOutworkDetail(form.value.outworkId);
+    }
+
     loadNextContractNo();
   }
 });
@@ -344,6 +353,21 @@ async function loadNextContractNo() {
     console.error("预生成合同编号失败", e);
   }
 }
+const labelFormat = (item) => item.planTime || "";
+
+// 外出记录默认回显 label（选项未加载时展示）
+const outworkLabel = ref("");
+
+// 加载外出记录详情用于回显 label
+async function loadOutworkDetail(id) {
+  try {
+    const data = await getOutworkDetail({ id });
+    const outwork = data.record || data;
+    outworkLabel.value = outwork.planTime || "";
+  } catch (e) {
+    console.error("加载外出记录详情失败", e);
+  }
+}
 
 // 加载合同详情并回显表单与合同文件
 async function loadContractDetail(id) {
@@ -354,13 +378,10 @@ async function loadContractDetail(id) {
 
     form.value = {
       contractNo: contract.contractNo || "",
-      customerId: contract.customerId || customer.id || "",
-      customerName:
-        customer.storeName ||
-        customer.customerName ||
-        contract.customerName ||
-        "",
+      customerId: contract.customerId || "",
+      customerName: contract.customerName || "",
       contractName: contract.contractName || "",
+      outworkId: contract.outworkId || "",
       signDate: contract.signDate || "",
       contractType: contract.contractType || "",
       signWay: contract.signWay || "",
@@ -370,6 +391,9 @@ async function loadContractDetail(id) {
       paperFileIdList: contract.paperFileIdList || [],
       remark: contract.remark || "",
     };
+    if (form.value.outworkId) {
+      loadOutworkDetail(form.value.outworkId);
+    }
     // 回显合同文件列表
     contractFileUrl.value = contract.contractFileUrl || "";
     // 回显纸质合同照片列表
@@ -497,6 +521,12 @@ function submitForm() {
         icon: "success",
       });
       setTimeout(() => {
+        if (mode.value === "create") {
+          uni.navigateTo({
+            url: "/pages/contract/contract",
+          });
+          return;
+        }
         uni.navigateBack();
       }, 800);
     })

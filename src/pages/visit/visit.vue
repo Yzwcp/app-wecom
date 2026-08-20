@@ -23,14 +23,19 @@
     <!-- 状态过滤 Tab -->
     <view class="tabs-box">
       <wd-tabs
+        v-if="tabsList?.length > 0"
         v-model="activeTab"
         color="#0066ff"
         inactive-color="#666"
         @change="handleTabChange"
       >
         <wd-tab title="全部" name="all"></wd-tab>
-        <wd-tab title="待回访" name="pending"></wd-tab>
-        <wd-tab title="已完成" name="completed"></wd-tab>
+        <wd-tab
+          v-for="item in tabsList"
+          :key="item.value"
+          :title="item.label"
+          :name="item.value"
+        ></wd-tab>
       </wd-tabs>
     </view>
 
@@ -46,12 +51,9 @@
             <text class="customer-name">{{ item.customerName }}</text>
           </view>
           <text
-            :class="[
-              'status-text',
-              getStatus(item) === '已完成' ? 'text-blue' : 'text-gray',
-            ]"
+            :class="['status-text', item.status ? 'text-blue' : 'text-gray']"
           >
-            {{ getStatus(item) }}
+            {{ getDictLabel("WJ_OUTWORK_STATUS", item.status) }}
           </text>
         </view>
 
@@ -74,7 +76,7 @@
         <!-- 操作按钮 -->
         <view class="card-footer">
           <wd-button
-            v-if="getStatus(item) === '待回访'"
+            v-if="!item.visitTime"
             type="primary"
             plain
             block
@@ -83,7 +85,7 @@
             >去回访</wd-button
           >
           <wd-button
-            v-if="getStatus(item) === '已完成'"
+            v-if="item.visitTime"
             type="secondary"
             plain
             block
@@ -104,9 +106,12 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
-import { getVisitPendingPage, getVisitRecordPage } from "@/api";
+import { ref, computed } from "vue";
+import { getOutworkPage } from "@/api/outwork";
 import { onShow } from "@dcloudio/uni-app";
+import { useDict } from "@/hooks/useDict";
+
+const { dictMap, getDictLabel } = useDict();
 
 onShow(() => {
   fetchData(1);
@@ -119,17 +124,22 @@ const currentPage = ref(1);
 const totalPages = ref(0);
 const pageSize = 10;
 
+// 字典：实现动态 Tab 列表
+const tabsList = computed(() => dictMap["WJ_OUTWORK_STATUS"] || []);
+
 // 获取列表数据
 async function fetchData(page = 1) {
   loading.value = true;
   try {
-    const params = { current: page, size: pageSize };
-    let res;
-    if (activeTab.value === "pending") {
-      res = await getVisitPendingPage(params);
-    } else {
-      res = await getVisitRecordPage(params);
+    const params = {
+      current: page,
+      size: pageSize,
+      outworkType: "RETURN",
+    };
+    if (activeTab.value !== "all") {
+      params.status = activeTab.value;
     }
+    const res = await getOutworkPage(params);
     const records = res.records || [];
     if (page === 1) {
       visitList.value = records;
@@ -144,11 +154,6 @@ async function fetchData(page = 1) {
   } finally {
     loading.value = false;
   }
-}
-
-// 根据 visitTime 判断状态
-function getStatus(item) {
-  return item.visitTime ? "已完成" : "待回访";
 }
 
 // 联动过滤筛选
@@ -203,6 +208,9 @@ function goToView(item) {
     url: "/pages/visit/commit",
     query: {
       id: item.id,
+      customerId: item.customerId,
+      contractId: item.contractId,
+      name: item.customerName || "",
       readonly: "true",
     },
   });

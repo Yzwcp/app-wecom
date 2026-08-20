@@ -10,7 +10,7 @@
         <view class="result-options">
           <view
             class="option-card"
-            :class="{ 'active-fail': formData.result === 'fail' }"
+            :class="{ 'active-success': formData.result === 'fail' }"
             @tap="formData.result = 'fail'"
           >
             <view class="icon-wrapper fail-icon">✕</view>
@@ -31,7 +31,7 @@
 
       <!-- 满意度 -->
       <view class="form-item">
-        <view class="item-label required">满意度</view>
+        <view class="item-label required">意向等级</view>
         <view class="intentLevel-options">
           <view
             v-for="item in satisfactionOptions"
@@ -166,8 +166,8 @@ async function submitResult() {
 
   // 映射外出结果
   const outworkResultMap = {
-    fail: "FAILED",
-    success: "COMPLETED",
+    fail: "NO_DEAL",
+    success: "DEAL",
   };
 
   const submitData = {
@@ -176,7 +176,7 @@ async function submitResult() {
     followUpPlan: formData.value.followPlan,
     id: outworkId.value,
     intentLevel: formData.value.intentLevel,
-    outworkResult: outworkResultMap[formData.value.result] || "COMPLETED",
+    outworkResult: outworkResultMap[formData.value.result],
     visitAttachmentFileIdList,
   };
 
@@ -287,16 +287,22 @@ onLoad(() => {
 
 /* 未成交激活态 */
 .active-fail {
-  border-color: #999999;
-  background-color: #fafafa;
+  border-color: #2f77ff;
+  background-color: #eef4ff;
   .fail-icon {
-    background-color: #999999;
+    background-color: #0062ff;
     color: #ffffff;
+  }
+  .title {
+    color: #0062ff;
+  }
+  .desc {
+    color: #0062ff;
   }
 }
 .fail-icon {
-  border: 2rpx solid #999999;
-  color: #999999;
+  border: 2rpx solid #0062ff;
+  color: #0062ff;
 }
 
 /* 已成交激活态 */
