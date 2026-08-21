@@ -19,3 +19,5 @@ export const debugConfig = {
 export const indexPageCompoent = "ICard";
 //阿里oss地址
 export const uploadBaseUrl = true ? baseUrl + "/pub/local/upload" : "-";
+// 应用版本号
+export const appVersion = "1.0.0";

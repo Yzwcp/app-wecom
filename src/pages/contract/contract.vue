@@ -290,10 +290,7 @@ function openSignModal(item) {
 
 // 从电签页面返回时刷新列表
 onShow(() => {
-  const result = uni.$router.params || {};
-  if (result?.signSuccess) {
-    fetchList(true);
-  }
+  fetchList(true);
 });
 
 // 继续编辑（草稿状态）

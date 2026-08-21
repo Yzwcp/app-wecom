@@ -254,39 +254,33 @@ async function submitVisitForm() {
 onLoad(async () => {
   const options = uni.$router.query || {};
   readonly.value = options.readonly === "true";
-
+  customerInfo.value.customerId = options.customerId || "";
+  customerInfo.value.id = options.id || "";
+  customerInfo.value.contractId = options.contractId || "";
+  customerInfo.value.name = decodeURIComponent(options.name || "");
+  customerInfo.value.contact = decodeURIComponent(options.contact || "");
   if (readonly.value) {
     // 只读模式：加载回访详情
     try {
       const res = await getOutworkDetail({ id: options.id });
-      loadCustomerInfo();
       const detail = res.record || {};
       // console.log(detail);
 
-      customerInfo.value.id = detail.id || "";
-      customerInfo.value.customerId = detail.customerId || "";
-      customerInfo.value.contractId = detail.contractId || "";
-      customerInfo.value.name = detail.customerName || "";
-      customerInfo.value.contact = detail.contact || "";
-      customerInfo.value.phone = detail.phone || "";
       formattedVisitTime.value = detail.visitTime || "";
       rateLevel.value = detail.satisfaction || "";
       formData.value.communicationRecord =
         detail.communicationRecord || detail.content || "";
       formData.value.problemRemark = detail.problemRemark || "";
       formData.value.followUpPlan = detail.followUpPlan || "";
-      customerInfo.value.id = options.id || "";
-      customerInfo.value.customerId = options.customerId || "";
-      customerInfo.value.contractId = options.contractId || "";
-      customerInfo.value.name = decodeURIComponent(options.name || "");
-      customerInfo.value.contact = decodeURIComponent(options.contact || "");
-      customerInfo.value.phone = options.phone || "";
+
+      console.log(customerInfo.value);
       loadCustomerInfo();
     } catch (error) {
       console.error("获取回访详情失败", error);
       uni.showToast({ title: "获取详情失败", icon: "none" });
     }
   } else {
+    loadCustomerInfo();
   }
 });
 

@@ -241,15 +241,36 @@
       </view>
     </view>
 
-    <!-- 底部固定的提交按钮 -->
+    <!-- 底部固定的操作按钮 -->
     <view v-if="!viewMode" class="bottom-action-bar">
-      <wd-button
-        type="primary"
-        class="btn-item"
-        :loading="submitLoading"
-        @click="submitForm"
-        >提交</wd-button
-      >
+      <!-- 纸质签时显示两个按钮：保存草稿 + 确认签署 -->
+      <template v-if="form.signWay === 'PAPER'">
+        <wd-button
+          plain
+          type="info"
+          class="btn-item btn-half"
+          :loading="submitLoading"
+          @click="submitForm('DRAFT')"
+          >保存草稿</wd-button
+        >
+        <wd-button
+          type="primary"
+          class="btn-item btn-half"
+          :loading="submitLoading"
+          @click="handleConfirmSign"
+          >确认签署</wd-button
+        >
+      </template>
+      <!-- 电子签或非纸质签：单个提交按钮 -->
+      <template v-else>
+        <wd-button
+          type="primary"
+          class="btn-item"
+          :loading="submitLoading"
+          @click="submitForm('DRAFT')"
+          >提交</wd-button
+        >
+      </template>
     </view>
 
     <!-- 日期时间选择器 -->
@@ -333,6 +354,8 @@ onLoad(() => {
     form.value.customerId = op.id;
     form.value.customerName = decodeURIComponent(op.name || "");
     form.value.outworkId = op.outworkId || "";
+    // 新增时默认电子签
+    form.value.signWay = "ESIGN";
 
     // 已关联外出记录时，拉取详情用于回显 label
     if (form.value.outworkId) {
@@ -459,7 +482,22 @@ function addPaperFileId(fileId) {
   }
 }
 
-function submitForm() {
+// 确认签署前二次确认，防止误触
+function handleConfirmSign() {
+  uni.showModal({
+    title: "确认签署",
+    content: "确认签署后合同将直接生效，是否继续？",
+    confirmText: "确认",
+    cancelText: "取消",
+    success: (res) => {
+      if (res.confirm) {
+        submitForm("CONFIRM");
+      }
+    },
+  });
+}
+
+function submitForm(saveAction = "DRAFT") {
   if (!form.value.customerId) {
     uni.showToast({ title: "缺少客户信息", icon: "none" });
     return;
@@ -501,6 +539,7 @@ function submitForm() {
     effectiveStartTime: form.value.effectiveStartTime || undefined,
     effectiveEndTime: form.value.effectiveEndTime || undefined,
     remark: form.value.remark || undefined,
+    saveAction,
   };
   // 按签署方式携带对应文件
   if (form.value.signWay === "ESIGN") {
@@ -708,11 +747,16 @@ function submitForm() {
   z-index: 2;
   display: flex;
   justify-content: center;
+  gap: 24rpx;
 
   .btn-item {
     width: 100%;
     :deep(.wd-button) {
     }
+  }
+
+  .btn-half {
+    width: calc(50% - 12rpx);
   }
 }
 </style>

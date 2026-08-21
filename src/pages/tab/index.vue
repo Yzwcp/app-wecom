@@ -78,6 +78,10 @@
           </view>
         </view>
       </view>
+      <!-- 版本号 -->
+      <view class="version-bar">
+        <text class="version-text">v{{ appVersion }}</text>
+      </view>
     </view>
   </view>
 </template>
@@ -86,6 +90,7 @@
 import { onLoad } from "@dcloudio/uni-app";
 import { workHome, logout } from "@/api/auth";
 import { useGlobalStore } from "@/store/global";
+import { appVersion } from "@/utils/config";
 import { toRefs, ref, computed } from "vue";
 const globalState = useGlobalStore();
 const { userInfo, menuList } = toRefs(globalState);
@@ -420,6 +425,17 @@ onLoad(() => {
 }
 .text-green {
   color: #2e7d32;
+}
+
+/* 版本号 */
+.version-bar {
+  display: flex;
+  justify-content: center;
+  padding: 40rpx 0 20rpx;
+  .version-text {
+    font-size: 22rpx;
+    color: #999;
+  }
 }
 
 /* 快捷操作模块 */
