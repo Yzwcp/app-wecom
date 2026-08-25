@@ -83,6 +83,31 @@
         </view>
       </view>
 
+      <!-- 2.5 物流信息（发货人员可见） -->
+      <view v-if="isDeliveryPerson" class="card form-card">
+        <view class="card-title">
+          <image class="icon-user" src="/static/delivery/member.png"></image>
+          <text class="title-text">物流信息</text>
+        </view>
+
+        <view class="form-row-grid">
+          <view class="form-item border-b border-r">
+            <input
+              v-model="formData.logisticsCompany"
+              placeholder="物流公司"
+              placeholder-class="placeholder-style"
+            />
+          </view>
+          <view class="form-item border-b">
+            <input
+              v-model="formData.logisticsNo"
+              placeholder="物流单号"
+              placeholder-class="placeholder-style"
+            />
+          </view>
+        </view>
+      </view>
+
       <!-- 3. 发货清单 -->
       <view class="card list-card">
         <view class="list-card-header">
@@ -176,14 +201,21 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { onLoad } from "@dcloudio/uni-app";
+import { useGlobalStore } from "../../store/global";
 import {
   addDelivery,
   editDelivery,
   getDeliveryDetail,
   extractReceiver,
 } from "@/api/delivery";
+
+const globalStore = useGlobalStore();
+
+const isDeliveryPerson = computed(() =>
+  globalStore.userInfo?.roleCodeList?.includes("WJ_DELIVERY_PERSON"),
+);
 
 const query = ref({});
 const isEdit = ref(false);
@@ -200,6 +232,8 @@ const formData = ref({
   receiverAddress: "",
   remark: "",
   needReturnDevice: true, // true=需要回寄, false=不需要
+  logisticsCompany: "",
+  logisticsNo: "",
 });
 
 // 发货清单
@@ -231,6 +265,8 @@ onLoad(async (options) => {
         formData.value.receiverAddress = res.receiverAddress || "";
         formData.value.remark = res.remark || "";
         formData.value.needReturnDevice = res.needReturnDevice !== "2";
+        formData.value.logisticsCompany = res.logisticsCompany || "";
+        formData.value.logisticsNo = res.logisticsNo || "";
         if (res.itemList?.length) {
           goodsList.value = res.itemList.map((i) => ({
             itemName: i.itemName || "",
@@ -351,6 +387,12 @@ const handleSubmit = async () => {
       unit: i.unit || "",
     })),
   };
+
+  // 发货人员提交物流信息
+  if (isDeliveryPerson.value) {
+    payload.logisticsCompany = formData.value.logisticsCompany || "";
+    payload.logisticsNo = formData.value.logisticsNo || "";
+  }
 
   // 如果有 constructionTaskId 则带上
   if (query.value?.constructionTaskId) {
@@ -486,6 +528,7 @@ const handleSubmit = async () => {
   /* 边框辅助线 */
   .border-b {
     border-bottom: 1rpx solid #eeeeee;
+    padding-left: 10px;
   }
   .border-r {
     border-right: 1rpx solid #eeeeee;

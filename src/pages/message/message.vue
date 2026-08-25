@@ -1,13 +1,7 @@
 <template>
   <view class="page">
     <!-- 顶部导航栏 -->
-    <wd-navbar
-      title="消息中心"
-      left-arrow
-      fixed
-      placeholder
-      @click-left="goBack"
-    >
+    <wd-navbar title="" left-arrow fixed placeholder @click-left="goBack">
       <template #right>
         <view
           v-if="unreadTotal > 0"

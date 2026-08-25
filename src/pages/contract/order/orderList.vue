@@ -92,6 +92,7 @@
             plain
             size="small"
             class="mgr-16"
+            v-if="item.payStatus !== '2'"
             @click.stop="openPay(item)"
             >支付码</wd-button
           >
@@ -100,6 +101,7 @@
             plain
             size="small"
             class="mgr-16"
+            v-if="item.payStatus === '2'"
             @click.stop="onSyncExpire(item)"
             >同步到期</wd-button
           >
@@ -108,16 +110,17 @@
             plain
             size="small"
             class="mgr-16"
+            v-if="item.payStatus !== '2'"
             @click.stop="goEdit(item)"
             >编辑</wd-button
           >
-          <wd-button
+          <!-- <wd-button
             type="danger"
             plain
             size="small"
             @click.stop="onDelete(item)"
             >删除</wd-button
-          >
+          > -->
         </view>
       </view>
 
@@ -166,10 +169,17 @@
     >
       <view class="pay-popup">
         <view class="popup-title">订单支付码</view>
-        <view class="pay-content" @click="copyPayCode">
-          <text class="pay-code-text">{{ payCodeText }}</text>
+        <view class="pay-content">
+          <!-- <text class="pay-code-text">{{ payCodeText }}</text> -->
+          <ikun-qrcode
+            width="400"
+            height="400"
+            unit="rpx"
+            color="#000000"
+            :data="payCodeText"
+          />
         </view>
-        <view class="pay-tip">点击内容可复制支付码/链接</view>
+        <!-- <view class="pay-tip">点击内容可复制支付码/链接</view> -->
         <view class="popup-footer">
           <wd-button
             class="footer-btn"
@@ -615,6 +625,8 @@ onLoad(async (op) => {
     background-color: #f7f8fa;
     border-radius: 12rpx;
     padding: 24rpx;
+    display: flex;
+    justify-content: center;
     .pay-code-text {
       font-size: 28rpx;
       color: #0066ff;
@@ -629,6 +641,9 @@ onLoad(async (op) => {
   }
   .popup-footer {
     margin-top: 32rpx;
+    display: flex;
+    justify-content: center;
+    gap: 20rpx;
     .footer-btn {
       :deep(.wd-button) {
         width: 100%;
