@@ -35,6 +35,13 @@
       }
     },
     {
+      "path": "pages/construction/admin/adminForm",
+      "style": {
+        "navigationBarTitleText": "创建施工任务",
+        "navigationStyle": "custom"
+      }
+    },
+    {
       "path": "pages/construction/material/material",
       "style": {
         "navigationBarTitleText": "材料列表",

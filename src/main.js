@@ -17,10 +17,12 @@ import {
 } from 'vue'
 import pinia from '@/store/index'
 import router from '@/router/index.js'
+import directives from '@/directives/has.js'
 export function createApp() {
 	const app = createSSRApp(App)
 	app.use(pinia)
 	app.use(router)
+	app.use(directives)
 	return {
 		app
 	}

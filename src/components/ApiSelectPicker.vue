@@ -14,16 +14,23 @@
       :title="title"
       :type="type"
       :loading="loading"
+      :z-index="zIndex"
       v-model:visible="innerVisible"
       @confirm="onConfirm"
       @cancel="onCancel"
     />
-    <wd-pagination
-      v-if="paginated && totalPages > 1"
-      v-model="currentPage"
-      :total="totalPages"
-      @change="handlePageChange"
-    />
+    <!-- 分页器：跟随弹层显示，定位在弹窗底部 -->
+    <view
+      v-if="paginated && totalPages > 1 && innerVisible"
+      class="api-select__pagination"
+      :style="{ zIndex: zIndex + 1 }"
+    >
+      <wd-pagination
+        v-model="currentPage"
+        :total="totalPages"
+        @change="handlePageChange"
+      />
+    </view>
   </view>
 </template>
 
@@ -54,6 +61,8 @@ const props = defineProps({
   visible: { type: Boolean, default: false },
   /** 自定义选项 label 格式化函数 (item) => string，优先级高于 labelKey */
   labelFormat: { type: Function, default: null },
+  /** 弹出层 z-index（页面有 fixed 底部栏时需要调大） */
+  zIndex: { type: Number, default: 10 },
 });
 
 const emit = defineEmits(["update:modelValue", "confirm", "update:visible"]);
@@ -187,6 +196,9 @@ function onCancel() {
     closeGuard = false;
   }, 300);
 }
+
+// 初始化时自动加载选项，确保回显正常
+fetchOptions();
 </script>
 
 <style scoped>
@@ -214,5 +226,16 @@ function onCancel() {
   font-size: 28rpx;
   color: #999;
   flex: 1;
+}
+
+/* 分页器：固定在弹窗内容上方 */
+.api-select__pagination {
+  position: fixed;
+  bottom: 120rpx;
+  left: 0;
+  right: 0;
+  background-color: #ffffff;
+  padding: 16rpx 24rpx;
+  border-top: 1rpx solid #eeeeee;
 }
 </style>

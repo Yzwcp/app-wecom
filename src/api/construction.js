@@ -37,3 +37,38 @@ export function doConstructionMaterialSave(data) {
 export function constructionCheckInRange(data) {
   return get("/wjapp/wjMobile/constructionTask/checkInRange", data);
 }
+
+// ==================== 管理员端施工任务 ====================
+
+// 管理员施工任务分页（全部数据，不按执行人过滤）
+export function getConstructionTaskPage(data) {
+  return get("/wjapp/wjMobile/constructionTask/page", data);
+}
+// 管理员创建施工任务
+export function createConstructionTask(data) {
+  return post("/wjapp/wjMobile/constructionTask/create", data);
+}
+// 任务模板列表（创建时选择模板自动填充）
+export function getConstructionTaskTemplateList(data) {
+  return get("/wjapp/wjMobile/constructionTask/templateList", data);
+}
+// 移动端子任务执行人列表（技术服务部成员）
+export function getConstructionExecutorList(data) {
+  return get("/wjapp/wjMobile/constructionTask/executorList", data);
+}
+// 移动端施工审核员列表
+export function getConstructionAuditorList(data) {
+  return get("/wjapp/wjMobile/constructionTask/auditorList", data);
+}
+// 施工任务详情
+export function getConstructionTaskDetail(data) {
+  return get("/wjapp/wjMobile/constructionTask/detail", data);
+}
+// 施工任务更新
+export function updateConstructionTask(data) {
+  return post("/wjapp/wjMobile/constructionTask/edit", data);
+}
+// 施工任务发布
+export function publishConstructionTask(data) {
+  return post("/wjapp/wjMobile/constructionTask/publish", data);
+}

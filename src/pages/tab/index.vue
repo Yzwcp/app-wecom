@@ -155,6 +155,7 @@ const menuConfig = {
     bg: "bg-blue-light",
     section: "shortcut",
   },
+
   "/pages/contract/contract": {
     label: "合同列表",
     icon: "/static/index/4.png",

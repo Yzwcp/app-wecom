@@ -98,6 +98,22 @@
             补充资料
           </button> -->
           <button
+            class="btn btn-outline"
+            v-has="'mobileWjConstructionTaskEdit'"
+            @click="handleEdit(item)"
+          >
+            编辑
+          </button>
+          <button
+            class="btn btn-primary"
+            style="background-color: #07c160"
+            v-has="'mobileWjConstructionTaskPublish'"
+            @click="handlePublish(item)"
+            v-if="item.status === 'UNPUBLISHED'"
+          >
+            发布
+          </button>
+          <button
             class="btn btn-primary"
             style="background-color: #ff7043"
             @click="goToDelivery(item)"
@@ -105,7 +121,11 @@
           >
             发货
           </button>
-          <button class="btn btn-primary" @click="goToDetail(item)">
+          <button
+            class="btn btn-primary"
+            v-if="item.status !== 'UNPUBLISHED'"
+            @click="goToDetail(item)"
+          >
             查看详情
           </button>
         </view>
@@ -135,6 +155,15 @@
       <!-- 占位底部隔离 -->
       <view class="safe-bottom"></view>
     </scroll-view>
+
+    <!-- 右下角新建按钮 -->
+    <view
+      class="fab-add"
+      v-has="'mobileWjConstructionTaskAdd'"
+      @click="goToCreate"
+    >
+      <text class="fab-plus">+</text>
+    </view>
   </view>
 </template>
 
@@ -142,7 +171,10 @@
 import { ref, nextTick, computed } from "vue";
 import { getElementHeight } from "@/utils/tools";
 import { onLoad } from "@dcloudio/uni-app";
-import { getConstructionMyPage } from "@/api/construction";
+import {
+  getConstructionMyPage,
+  publishConstructionTask,
+} from "@/api/construction";
 import { useGlobalStore } from "@/store/global";
 import { useDict } from "@/hooks/useDict";
 import { getCustomerBaseInfo } from "@/api/customer";
@@ -277,6 +309,38 @@ function goBack() {
 function goToDelivery(item) {
   uni.navigateTo({
     url: `/pages/delivery/form?constructionTaskId=${item.id}`,
+  });
+}
+
+// 跳转到创建施工任务
+function goToCreate() {
+  uni.$router.push({ url: "/pages/construction/admin/adminForm" });
+}
+
+// 编辑施工任务
+function handleEdit(item) {
+  uni.$router.push({
+    url: `/pages/construction/admin/adminForm?id=${item.id}`,
+  });
+}
+
+// 发布施工任务
+function handlePublish(item) {
+  uni.showModal({
+    title: "发布确认",
+    content: `确定发布任务「${item.taskNo}」吗？`,
+    confirmText: "发布",
+    cancelText: "取消",
+    success: async (res) => {
+      if (!res.confirm) return;
+      try {
+        await publishConstructionTask({ id: item.id });
+        uni.showToast({ title: "发布成功", icon: "success" });
+        fetchList(true);
+      } catch (error) {
+        console.error("发布施工任务失败", error);
+      }
+    },
   });
 }
 
@@ -556,6 +620,33 @@ onLoad(async (options) => {
 }
 
 .safe-bottom {
-  height: 60rpx;
+  height: 140rpx;
+}
+
+/* 右下角新建按钮 */
+.fab-add {
+  position: fixed;
+  right: 40rpx;
+  bottom: 80rpx;
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 50%;
+  background-color: #2979ff;
+  box-shadow: 0 8rpx 24rpx rgba(41, 121, 255, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99;
+
+  &:active {
+    opacity: 0.85;
+  }
+
+  .fab-plus {
+    color: #ffffff;
+    font-size: 56rpx;
+    line-height: 1;
+    margin-top: -6rpx;
+  }
 }
 </style>
