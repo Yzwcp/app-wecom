@@ -261,7 +261,7 @@ onLoad(() => {
   background: transparent !important;
 }
 :deep(.wd-count-to__main-text) {
-  font-size: 50rpx !important;
+  font-size: 36rpx !important;
   font-weight: 700;
 }
 

@@ -134,6 +134,13 @@
               >
                 去执行
               </view>
+              <view
+                v-if="sub.status === 'PENDING'"
+                class="transfer-btn"
+                @click="openTransfer(sub)"
+              >
+                转派
+              </view>
             </view>
           </view>
 
@@ -194,6 +201,58 @@
     >
       <text class="submit-fab-text">提交完工</text>
     </view>
+
+    <!-- 转派弹窗 -->
+    <wd-popup
+      v-model="showTransfer"
+      position="bottom"
+      :safe-area-inset-bottom="true"
+      custom-style="border-radius: 24rpx 24rpx 0 0;"
+      @close="closeTransfer"
+    >
+      <view class="transfer-popup">
+        <view class="transfer-header">
+          <text class="transfer-title">转派子任务</text>
+          <wd-icon
+            name="close"
+            size="20px"
+            color="#999"
+            @click="closeTransfer"
+          />
+        </view>
+        <view class="transfer-body">
+          <view class="transfer-label">转派给</view>
+          <ApiSelectPicker
+            v-model="transferExecutorIds"
+            :api="getConstructionExecutorList"
+            type="checkbox"
+            label-key="name"
+            value-key="id"
+            title="选择执行人"
+            placeholder="请选择执行人"
+            :z-index="999"
+            :disabled-values="currentSubTask?.executorIdList || []"
+          />
+          <view class="transfer-label">转派原因</view>
+          <textarea
+            v-model="transferReason"
+            placeholder="请输入转派原因"
+            placeholder-class="placeholder-style"
+            class="transfer-textarea"
+          />
+        </view>
+        <view class="transfer-footer">
+          <button class="btn-cancel" @click="closeTransfer">取消</button>
+          <button
+            class="btn-submit"
+            :disabled="transferSubmitting"
+            @click="confirmTransfer"
+          >
+            {{ transferSubmitting ? "提交中..." : "确认转派" }}
+          </button>
+        </view>
+      </view>
+    </wd-popup>
   </view>
 </template>
 
@@ -204,7 +263,10 @@ import {
   getConstructionDetail,
   getCustomerBaseInfo,
   doConstructionSubmit,
+  getConstructionExecutorList,
+  transferConstructionTask,
 } from "@/api";
+import ApiSelectPicker from "@/components/ApiSelectPicker.vue";
 import { useDict } from "@/hooks/useDict";
 
 const { dictMap, getDictLabel } = useDict();
@@ -337,6 +399,48 @@ function goExecute(sub) {
       mode: "create",
     },
   });
+}
+
+// ========== 转派 ==========
+const showTransfer = ref(false);
+const transferExecutorIds = ref([]);
+const transferReason = ref("");
+const transferSubmitting = ref(false);
+const currentSubTask = ref(null);
+
+function openTransfer(sub) {
+  currentSubTask.value = sub;
+  transferExecutorIds.value = [];
+  transferReason.value = "";
+  showTransfer.value = true;
+}
+
+function closeTransfer() {
+  showTransfer.value = false;
+  currentSubTask.value = null;
+}
+
+async function confirmTransfer() {
+  if (!transferExecutorIds.value.length) {
+    return uni.showToast({ title: "请选择执行人", icon: "none" });
+  }
+  transferSubmitting.value = true;
+  try {
+    await transferConstructionTask({
+      taskId: task.value.id,
+      subTaskId: currentSubTask.value.id,
+      newExecutorIdList: transferExecutorIds.value,
+      transferReason: transferReason.value || undefined,
+    });
+    uni.showToast({ title: "转派成功", icon: "success" });
+    closeTransfer();
+    fetchDetail(task.value.id);
+  } catch (error) {
+    console.error("转派子任务失败", error);
+    uni.showToast({ title: error?.message || "转派失败", icon: "none" });
+  } finally {
+    transferSubmitting.value = false;
+  }
 }
 
 // ========== 加载数据 ==========
@@ -626,6 +730,18 @@ onShow(() => {
   font-weight: 500;
 }
 
+.transfer-btn {
+  display: inline-block;
+  margin-top: 12rpx;
+  margin-left: 16rpx;
+  padding: 8rpx 28rpx;
+  font-size: 24rpx;
+  color: #ff7043;
+  background-color: #fff3e0;
+  border-radius: 30rpx;
+  font-weight: 500;
+}
+
 .empty-timeline-text {
   text-align: center;
   font-size: 26rpx;
@@ -766,6 +882,76 @@ onShow(() => {
 
   &:active {
     opacity: 0.85;
+  }
+}
+
+/* 转派弹窗 */
+.transfer-popup {
+  padding: 32rpx;
+  background-color: #ffffff;
+
+  .transfer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 32rpx;
+
+    .transfer-title {
+      font-size: 32rpx;
+      font-weight: 600;
+      color: #333;
+    }
+  }
+
+  .transfer-body {
+    margin-bottom: 32rpx;
+
+    .transfer-label {
+      font-size: 28rpx;
+      color: #666;
+      margin-bottom: 16rpx;
+    }
+
+    .transfer-textarea {
+      width: 100%;
+      min-height: 160rpx;
+      background-color: #f8f9fa;
+      border-radius: 12rpx;
+      padding: 20rpx 24rpx;
+      font-size: 28rpx;
+      box-sizing: border-box;
+    }
+  }
+
+  .transfer-footer {
+    display: flex;
+    gap: 24rpx;
+
+    .btn-cancel {
+      flex: 1;
+      height: 80rpx;
+      line-height: 80rpx;
+      background-color: #f5f5f5;
+      color: #666;
+      font-size: 30rpx;
+      border-radius: 40rpx;
+      border: none;
+    }
+
+    .btn-submit {
+      flex: 1;
+      height: 80rpx;
+      line-height: 80rpx;
+      background-color: #2979ff;
+      color: #ffffff;
+      font-size: 30rpx;
+      border-radius: 40rpx;
+      border: none;
+
+      &:disabled {
+        opacity: 0.6;
+      }
+    }
   }
 }
 </style>

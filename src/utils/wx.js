@@ -29,7 +29,7 @@ export function initWework(options = {}) {
     return;
   }
 
-  const apiList = jsApiList || ["geoLocation"];
+  const apiList = jsApiList || ["geoLocation", "openLocation"];
 
   ww.register({
     corpId,
@@ -75,6 +75,44 @@ export function getLocation(options = {}) {
           speed: res.speed || 0,
           accuracy: res.accuracy,
         });
+      },
+      fail(err) {
+        reject(err);
+      },
+    });
+  });
+}
+
+/**
+ * 使用企业微信内置地图查看位置
+ *
+ * @param {Object} options
+ * @param {number} options.latitude  - 纬度，浮点数，范围为90 ~ -90
+ * @param {number} options.longitude - 经度，浮点数，范围为180 ~ -180
+ * @param {string} [options.name]    - 位置名
+ * @param {string} [options.address] - 地址详情说明
+ * @param {number} [options.scale=14] - 地图缩放级别, 整形值, 范围从1~28。默认为最大
+ *
+ * @example
+ * import { openLocation } from "@/utils/wx";
+ *
+ * openLocation({
+ *   latitude: 30.27415,
+ *   longitude: 120.15515,
+ *   name: "客户名称",
+ *   address: "详细地址",
+ * });
+ */
+export function openLocation(options = {}) {
+  return new Promise((resolve, reject) => {
+    ww.openLocation({
+      latitude: options.latitude,
+      longitude: options.longitude,
+      name: options.name || "",
+      address: options.address || "",
+      scale: options.scale || 14,
+      success(res) {
+        resolve(res);
       },
       fail(err) {
         reject(err);

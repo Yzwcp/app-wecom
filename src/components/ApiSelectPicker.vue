@@ -63,6 +63,8 @@ const props = defineProps({
   labelFormat: { type: Function, default: null },
   /** 弹出层 z-index（页面有 fixed 底部栏时需要调大） */
   zIndex: { type: Number, default: 10 },
+  /** 禁止选中的 value 列表（如转派时排除当前执行人） */
+  disabledValues: { type: Array, default: () => [] },
 });
 
 const emit = defineEmits(["update:modelValue", "confirm", "update:visible"]);
@@ -111,6 +113,7 @@ const options = computed(() => {
       ? props.labelFormat(item)
       : (item[props.labelKey] ?? item),
     value: item[props.valueKey] ?? item,
+    disabled: props.disabledValues.includes(item[props.valueKey] ?? item),
   }));
 });
 

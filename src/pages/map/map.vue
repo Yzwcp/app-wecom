@@ -76,13 +76,19 @@
         </view>
       </view>
 
-      <view class="info-line">
+      <view class="info-line" @tap="handleOpenLocation(activeVisit)">
         <image
           class="info-icon"
           src="/static/map/map.png"
           mode="aspectFit"
         ></image>
         <text class="info-text">{{ activeVisit.address }}</text>
+        <text
+          class="info-text"
+          style="color: #007aff; margin-left: 10rpx"
+          v-if="activeVisit.latitude && activeVisit.longitude"
+          >导航</text
+        >
       </view>
       <view class="info-line">
         <image
@@ -126,7 +132,7 @@ import { computed, ref } from "vue";
 import { onLoad, onShow } from "@dcloudio/uni-app";
 import { useGlobalStore } from "../../store/global";
 import { storeToRefs } from "pinia";
-import { getLocation } from "@/utils/wx";
+import { getLocation, openLocation } from "@/utils/wx";
 import { getOutworkMap } from "@/api/outwork";
 import { useDict } from "@/hooks/useDict";
 import ApiSelectPicker from "@/components/ApiSelectPicker.vue";
@@ -303,6 +309,26 @@ function handleCreateContract(item) {
 }
 
 /**
+ * 点击地址，调用企业微信 openLocation 查看位置
+ */
+function handleOpenLocation(item) {
+  if (!item || !item.latitude || !item.longitude) {
+    uni.showToast({ title: "该地址暂无经纬度信息", icon: "none" });
+    return;
+  }
+  openLocation({
+    latitude: Number(item.latitude),
+    longitude: Number(item.longitude),
+    name: item.customerName || "",
+    address: item.address || "",
+    scale: 16,
+  }).catch((err) => {
+    console.error("openLocation 调用失败:", err);
+    uni.showToast({ title: "打开位置失败", icon: "none" });
+  });
+}
+
+/**
  * 获取定位（优先使用 URL 传入的经纬度），更新地图中心，然后加载外勤数据
  */
 async function loadLocation() {
@@ -467,7 +493,8 @@ onLoad(() => {
     margin-bottom: 20rpx;
 
     .customer-name {
-      font-size: 36rpx;
+      width: 80%;
+      font-size: 30rpx;
       font-weight: bold;
       color: #333333;
     }

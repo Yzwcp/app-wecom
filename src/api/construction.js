@@ -72,3 +72,7 @@ export function updateConstructionTask(data) {
 export function publishConstructionTask(data) {
   return post("/wjapp/wjMobile/constructionTask/publish", data);
 }
+// 转派子任务
+export function transferConstructionTask(data) {
+  return post("/wjapp/wjMobile/constructionTask/transfer", data);
+}
