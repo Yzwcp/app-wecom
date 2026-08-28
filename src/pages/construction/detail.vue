@@ -19,7 +19,7 @@
         <!-- 地址与联系人信息 -->
         <view class="card-body">
           <view class="label-text">地址</view>
-          <view class="address-row">
+          <view class="address-row" @tap="handleOpenLocation">
             <text class="address-detail">{{
               customerBaseInfo.address || "暂无地址"
             }}</text>
@@ -38,9 +38,11 @@
             </view>
             <view class="contact-cell">
               <view class="label-text">电话号码</view>
-              <view class="value-text phone-color font-bold">{{
-                customerBaseInfo.contactPhone || "-"
-              }}</view>
+              <view
+                class="value-text phone-color font-bold"
+                @tap="handleCallPhone"
+                >{{ customerBaseInfo.contactPhone || "-" }}</view
+              >
             </view>
           </view>
 
@@ -266,6 +268,7 @@ import {
   getConstructionExecutorList,
   transferConstructionTask,
 } from "@/api";
+import { openLocation } from "@/utils/wx";
 import ApiSelectPicker from "@/components/ApiSelectPicker.vue";
 import { useDict } from "@/hooks/useDict";
 
@@ -475,6 +478,41 @@ onShow(() => {
     fetchDetail(query.id);
   }
 });
+
+/**
+ * 点击地址，调用企业微信 openLocation 查看位置
+ */
+function handleOpenLocation() {
+  const { latitude, longitude, address, customerName } = customerBaseInfo.value;
+  if (!latitude || !longitude) {
+    uni.showToast({ title: "该地址暂无经纬度信息", icon: "none" });
+    return;
+  }
+  openLocation({
+    latitude: Number(latitude),
+    longitude: Number(longitude),
+    name: customerName || "",
+    address: address || "",
+    scale: 16,
+  }).catch((err) => {
+    console.error("openLocation 调用失败:", err);
+    uni.showToast({ title: "打开位置失败", icon: "none" });
+  });
+}
+
+/**
+ * 点击电话，调起系统拨号
+ */
+function handleCallPhone() {
+  const phone = customerBaseInfo.value.contactPhone;
+  if (!phone) {
+    uni.showToast({ title: "暂无电话号码", icon: "none" });
+    return;
+  }
+  uni.makePhoneCall({
+    phoneNumber: phone,
+  });
+}
 </script>
 
 <style scoped lang="scss">

@@ -76,3 +76,8 @@ export function publishConstructionTask(data) {
 export function transferConstructionTask(data) {
   return post("/wjapp/wjMobile/constructionTask/transfer", data);
 }
+
+// 货品列表（材料选择）
+export function getGoodsList(data) {
+  return get("/wjapp/wjMobile/goods/list", data);
+}

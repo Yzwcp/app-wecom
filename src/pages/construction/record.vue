@@ -222,13 +222,17 @@
               材料名称
               <text class="red">*</text>
             </view>
-            <wd-input
-              v-model="item.materialName"
-              placeholder="请输入材料名称"
-              no-border
-              :readonly="pageMode === 'view'"
-              custom-class="form-input-bg material-input-bg"
-            />
+            <view
+              class="goods-picker-trigger"
+              :class="{ 'picker-disabled': pageMode === 'view' }"
+              @click="pageMode !== 'view' && openGoodsPicker(index)"
+            >
+              <text v-if="item.materialName" class="goods-name">
+                {{ item.materialName }}
+              </text>
+              <text v-else class="goods-placeholder">请选择货品</text>
+              <wd-icon name="arrow" size="14px" color="#999" />
+            </view>
           </view>
 
           <view class="two-col">
@@ -259,6 +263,40 @@
                 custom-class="form-input-bg material-input-bg"
               />
             </view>
+          </view>
+
+          <view class="two-col">
+            <view class="field-block flex-1">
+              <view class="field-lbl">分类</view>
+              <DictSelectPicker
+                v-model="item.goodsCategory"
+                dict-key="GOODS_CATEGORY"
+                placeholder="请选择分类"
+                :disabled="pageMode === 'view'"
+              />
+            </view>
+            <view class="field-block flex-1">
+              <view class="field-lbl">进货价</view>
+              <wd-input
+                v-model="item.purchasePrice"
+                type="digit"
+                placeholder="进货价"
+                no-border
+                :readonly="pageMode === 'view'"
+                custom-class="form-input-bg material-input-bg"
+              />
+            </view>
+          </view>
+
+          <view class="field-block">
+            <view class="field-lbl">规格</view>
+            <wd-input
+              v-model="item.materialSpec"
+              placeholder="请输入规格"
+              no-border
+              :readonly="pageMode === 'view'"
+              custom-class="form-input-bg material-input-bg"
+            />
           </view>
 
           <view class="field-block">
@@ -297,6 +335,19 @@
       @confirm="onDateConfirm"
       @cancel="showDatePicker = false"
     />
+
+    <!-- 货品选择器（隐藏触发框，由材料名称点击弹出） -->
+    <ApiSelectPicker
+      hide-inner
+      v-model="selectedGoodsId"
+      v-model:visible="goodsPickerVisible"
+      :api="getGoodsList"
+      :label-format="goodsLabelFormat"
+      value-key="id"
+      title="选择货品"
+      placeholder="请选择货品"
+      @confirm="onGoodsConfirm"
+    />
   </view>
 </template>
 
@@ -309,11 +360,17 @@ import {
   constructionCheckInRange,
   getConstructionMaterialList,
   getConstructionVisitDetail,
+  getGoodsList,
 } from "@/api/construction";
 import { getLocation } from "@/utils/wx";
 import ImgUpload from "@/components/ImgUpload.vue";
 import { getCustomerBaseInfo } from "@/api/customer";
 import { extractFileIdFromUrl } from "@/utils/tools";
+import ApiSelectPicker from "@/components/ApiSelectPicker.vue";
+import DictSelectPicker from "@/components/DictSelectPicker.vue";
+import { useDict } from "@/hooks/useDict";
+
+const { getDictLabel } = useDict();
 
 const customerBaseInfo = ref({
   latitude: 0,
@@ -608,6 +665,10 @@ async function handleSave(saveType) {
     materialList: materialList.value.map((m) => ({
       ...m,
       quantity: Number(m.quantity),
+      purchasePrice:
+        m.purchasePrice === "" || m.purchasePrice == null
+          ? 0
+          : Number(m.purchasePrice),
     })),
     beforeImageFileIdList: beforeImageUrl,
     afterImageFileIdList: afterImageUrl,
@@ -661,11 +722,49 @@ function handleComplete() {
 function newMaterial() {
   return {
     id: "",
+    goodsCategory: "",
+    goodsId: "",
     materialName: "",
+    materialSpec: "",
+    purchasePrice: 0,
     quantity: "",
-    unit: "",
     remark: "",
+    unit: "",
   };
+}
+
+// 货品选择器状态
+const goodsPickerVisible = ref(false);
+const selectedGoodsId = ref("");
+const currentGoodsIndex = ref(-1);
+
+function openGoodsPicker(index) {
+  currentGoodsIndex.value = index;
+  selectedGoodsId.value = materialList.value[index]?.goodsId || "";
+  goodsPickerVisible.value = true;
+}
+
+function goodsLabelFormat(item) {
+  const parts = [item.goodsName || ""];
+  if (item.goodsModel) parts.push(item.goodsModel);
+  if (item.purchasePrice != null) parts.push(`¥${item.purchasePrice}`);
+  return parts.filter(Boolean).join(" | ");
+}
+
+function onGoodsConfirm(item) {
+  if (!item || currentGoodsIndex.value < 0) return;
+  const m = materialList.value[currentGoodsIndex.value];
+  if (m) {
+    m.goodsId = item.id;
+    m.goodsCategory = item.goodsCategory || "";
+    m.materialName = item.goodsName || "";
+    m.materialSpec = item.goodsModel || "";
+    m.purchasePrice = item.purchasePrice ?? 0;
+    // 回填备注（如果为空）
+    if (!m.remark && item.remark) {
+      m.remark = item.remark;
+    }
+  }
 }
 
 function addMaterial() {
@@ -1103,13 +1202,42 @@ onLoad(() => {
   }
 }
 
+/* 货品选择器触发框 */
+.goods-picker-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #ffffff;
+  border: 2rpx solid #dfe2e8;
+  border-radius: 12rpx;
+  padding: 20rpx 24rpx;
+  min-height: 48rpx;
+
+  &.picker-disabled {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+
+  .goods-name {
+    font-size: 28rpx;
+    color: #333;
+    flex: 1;
+  }
+
+  .goods-placeholder {
+    font-size: 28rpx;
+    color: #999;
+    flex: 1;
+  }
+}
+
 /* 4. 底部固定暂存/完工按钮 */
 .fixed-bottom-bar {
   position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 100;
+  z-index: 1;
   background-color: #ffffff;
   padding: 20rpx 30rpx calc(20rpx + env(safe-area-inset-bottom)) 30rpx;
   display: flex;
