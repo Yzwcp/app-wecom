@@ -12,7 +12,9 @@
           <wd-icon :name="statusIcon" size="48rpx" color="#fff" />
         </view>
         <view class="status-info">
-          <text class="status-text">{{ detail.statusName || getStatusText(detail.status) }}</text>
+          <text class="status-text">{{
+            detail.statusName || getStatusText(detail.status)
+          }}</text>
           <text class="status-desc">{{ statusDesc }}</text>
         </view>
       </view>
@@ -24,10 +26,10 @@
           <text class="label">物流单号</text>
           <text class="value">{{ detail.logisticsNo || "-" }}</text>
         </view>
-        <view class="info-row">
+        <!-- <view class="info-row">
           <text class="label">关联施工</text>
           <text class="value">{{ detail.constructionTaskId || "-" }}</text>
-        </view>
+        </view> -->
         <view class="info-row">
           <text class="label">备注</text>
           <text class="value">{{ detail.remark || "无" }}</text>
@@ -49,9 +51,16 @@
           <text class="label">收货地址</text>
           <text class="value address">{{ detail.receiverAddress || "-" }}</text>
         </view>
-        <view class="info-row" v-if="detail.needReturnDevice">
+        <view class="info-row" v-if="detail.needReturnDevice === '1'">
           <text class="label">回寄设备</text>
           <text class="value tag-yes">需要回寄</text>
+        </view>
+        <view class="info-row" v-if="detail.needReturnDevice === '1'">
+          <text class="label">回寄状态</text>
+          <text class="value">{{
+            getDictLabel("WJ_DELIVERY_RETURN_STATUS", detail.returnStatus) ||
+            "-"
+          }}</text>
         </view>
       </view>
 
@@ -66,7 +75,9 @@
           <view class="goods-index">{{ idx + 1 }}</view>
           <view class="goods-info">
             <text class="goods-name">{{ item.itemName }}</text>
-            <text class="goods-spec" v-if="item.spec">规格：{{ item.spec }}</text>
+            <text class="goods-spec" v-if="item.spec"
+              >规格：{{ item.spec }}</text
+            >
           </view>
           <text class="goods-qty">{{ item.quantity }}{{ item.unit }}</text>
         </view>
@@ -81,6 +92,16 @@
 
     <!-- 底部固定操作栏 -->
     <view class="footer-actions" v-if="detail">
+      <button
+        v-if="
+          detail.needReturnDevice === '1' &&
+          detail.returnStatus === 'NOT_RETURNED'
+        "
+        class="btn-return"
+        @click="handleReturnDevice"
+      >
+        确认寄回
+      </button>
       <button class="btn-back" @click="goBack">返回</button>
     </view>
   </view>
@@ -88,19 +109,27 @@
 
 <script setup>
 import { ref } from "vue";
-import { onLoad } from "@dcloudio/uni-app";
-import { getDeliveryDetail } from "@/api/delivery";
+import { onLoad, onShow } from "@dcloudio/uni-app";
+import { getDeliveryDetail, returnDeviceDelivery } from "@/api/delivery";
+import { useDict } from "@/hooks/useDict";
+
+const { dictMap, getDictLabel } = useDict();
 
 const detail = ref(null);
 const loading = ref(true);
 const id = ref("");
 
 const STATUS_MAP = {
-  APPLY: { text: "待审核", cls: "audit", icon: "clock", desc: "等待审核中" },
-  AUDIT: { text: "待发货", cls: "progress", icon: "delivery", desc: "审核通过，等待发货" },
-  DELIVERY: { text: "已发货", cls: "pending", icon: "ship", desc: "货物已在运输途中" },
-  RECEIVE: { text: "已完成", cls: "completed", icon: "checked", desc: "已签收完成" },
-  REJECTED: { text: "已驳回", cls: "rejected", icon: "close", desc: "申请已被驳回" },
+  DRAFT: { cls: "other", icon: "edit", desc: "草稿待提交" },
+  PENDING_AUDIT: { cls: "audit", icon: "clock", desc: "等待审核中" },
+  PENDING_DELIVERY: {
+    cls: "progress",
+    icon: "delivery",
+    desc: "审核通过，等待发货",
+  },
+  DELIVERED: { cls: "pending", icon: "ship", desc: "货物已在运输途中" },
+  COMPLETED: { cls: "completed", icon: "checked", desc: "已签收完成" },
+  REJECTED: { cls: "rejected", icon: "close", desc: "申请已被驳回" },
 };
 
 const statusCls = ref("");
@@ -108,7 +137,7 @@ const statusIcon = ref("");
 const statusDesc = ref("");
 
 function getStatusText(status) {
-  return STATUS_MAP[status]?.text || "未知";
+  return getDictLabel("WJ_DELIVERY_TASK_STATUS", status) || "未知";
 }
 
 function updateStatusMeta(status) {
@@ -124,12 +153,8 @@ function updateStatusMeta(status) {
   }
 }
 
-onLoad(async (options) => {
-  id.value = options?.id || "";
-  if (!id.value) {
-    loading.value = false;
-    return;
-  }
+async function fetchDetail() {
+  loading.value = true;
   try {
     const res = await getDeliveryDetail({ id: id.value });
     detail.value = res;
@@ -140,7 +165,36 @@ onLoad(async (options) => {
   } finally {
     loading.value = false;
   }
+}
+
+onLoad((options) => {
+  id.value = options?.id || "";
+  if (!id.value) {
+    loading.value = false;
+    return;
+  }
+  fetchDetail();
 });
+
+// 确认寄回
+function handleReturnDevice() {
+  uni.showModal({
+    title: "确认寄回",
+    content: "确认设备已寄回吗？",
+    confirmText: "确认",
+    cancelText: "取消",
+    success: async (res) => {
+      if (!res.confirm) return;
+      try {
+        await returnDeviceDelivery({ id: id.value });
+        uni.showToast({ title: "确认成功", icon: "success" });
+        fetchDetail();
+      } catch (error) {
+        console.error("确认寄回失败", error);
+      }
+    },
+  });
+}
 
 function goBack() {
   uni.navigateBack();
@@ -171,12 +225,24 @@ function goBack() {
   padding: 48rpx 40rpx;
   color: #ffffff;
 
-  &.header-audit { background: linear-gradient(135deg, #f59e0b, #fbbf24); }
-  &.header-progress { background: linear-gradient(135deg, #f2825b, #fb923c); }
-  &.header-pending { background: linear-gradient(135deg, #2979ff, #60a5fa); }
-  &.header-completed { background: linear-gradient(135deg, #2ecc71, #4ade80); }
-  &.header-rejected { background: linear-gradient(135deg, #ef5350, #f87171); }
-  &.header-other { background: linear-gradient(135deg, #9ca3af, #cbd5e1); }
+  &.header-audit {
+    background: linear-gradient(135deg, #f59e0b, #fbbf24);
+  }
+  &.header-progress {
+    background: linear-gradient(135deg, #f2825b, #fb923c);
+  }
+  &.header-pending {
+    background: linear-gradient(135deg, #2979ff, #60a5fa);
+  }
+  &.header-completed {
+    background: linear-gradient(135deg, #2ecc71, #4ade80);
+  }
+  &.header-rejected {
+    background: linear-gradient(135deg, #ef5350, #f87171);
+  }
+  &.header-other {
+    background: linear-gradient(135deg, #9ca3af, #cbd5e1);
+  }
 
   .status-icon {
     width: 80rpx;
@@ -322,9 +388,30 @@ function goBack() {
   background: #ffffff;
   padding: 24rpx 40rpx calc(24rpx + env(safe-area-inset-bottom));
   box-shadow: 0 -4rpx 16rpx rgba(0, 0, 0, 0.04);
+  display: flex;
+  gap: 24rpx;
+
+  .btn-return {
+    flex: 1;
+    height: 88rpx;
+    line-height: 88rpx;
+    font-size: 30rpx;
+    color: #ffffff;
+    background: #2979ff;
+    border-radius: 16rpx;
+    margin: 0;
+
+    &::after {
+      border: none;
+    }
+
+    &:active {
+      background: #1a65eb;
+    }
+  }
 
   .btn-back {
-    width: 100%;
+    flex: 1;
     height: 88rpx;
     line-height: 88rpx;
     font-size: 30rpx;

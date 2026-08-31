@@ -44,3 +44,13 @@ export function returnDeviceDelivery(data) {
 export function extractReceiver(data) {
   return post("/wjapp/wjMobile/deliveryTask/extractReceiver", data);
 }
+
+// 移动端发货部人员列表
+export function getDeliveryPersonList(data) {
+  return get("/wjapp/wjMobile/deliveryTask/deliveryPersonList", data);
+}
+
+// 移动端物品选择器列表（含库存数）
+export function getGoodsList(data) {
+  return get("/wjapp/wjMobile/goods/list", data);
+}

@@ -33,7 +33,23 @@
 
           <text class="title-text">签收信息</text>
         </view>
-
+        <view class="customer-select-row">
+          <view class="field-lbl">客户（门店）</view>
+          <ApiSelectScrollPicker
+            v-model="formData.customerId"
+            :api="getCustomerPage"
+            paginated
+            remote-search
+            search-key="nameKeyword"
+            label-key="storeName"
+            value-key="id"
+            title="选择客户"
+            placeholder="选后收货信息未填时自动带出"
+            :label="selectedCustomerName"
+            :z-index="999"
+            @confirm="onCustomerConfirm"
+          />
+        </view>
         <view class="form-row-grid">
           <view class="form-item border-b border-r">
             <input
@@ -60,6 +76,8 @@
           />
         </view>
 
+        <!-- 客户（门店）：传了则收货信息未填时默认从门店带出 -->
+
         <view class="remark-section">
           <view class="remark-label">备注</view>
           <textarea
@@ -83,7 +101,25 @@
         </view>
       </view>
 
-      <!-- 2.5 物流信息（发货人员可见） -->
+      <!-- 2.5 发货人员 -->
+      <view class="card form-card">
+        <view class="card-title">
+          <image class="icon-user" src="/static/delivery/member.png"></image>
+          <text class="title-text">发货人员</text>
+        </view>
+        <ApiSelectPicker
+          v-model="formData.deliveryPersonId"
+          :api="getDeliveryPersonList"
+          label-key="name"
+          value-key="id"
+          title="选择发货人员"
+          placeholder="请选择发货人员"
+          :label="selectedDeliveryPersonName"
+          :z-index="999"
+        />
+      </view>
+
+      <!-- 2.6 物流信息（发货人员可见） -->
       <view v-if="isDeliveryPerson" class="card form-card">
         <view class="card-title">
           <image class="icon-user" src="/static/delivery/member.png"></image>
@@ -142,7 +178,10 @@
               <input
                 class="goods-name-input"
                 v-model="item.itemName"
-                placeholder="请输入物品名称"
+                :disabled="!!item.goodsId"
+                :placeholder="
+                  item.goodsId ? '以货品档案为准' : '请输入物品名称'
+                "
               />
               <view class="goods-actions">
                 <!-- <text
@@ -158,13 +197,29 @@
               </view>
             </view>
 
+            <!-- 选择库存货品（选后自动带名称规格） -->
+            <view class="goods-picker">
+              <ApiSelectPicker
+                v-model="item.goodsId"
+                :api="getGoodsList"
+                label-key="goodsName"
+                value-key="id"
+                :labelFormat="goodsLabelFormat"
+                title="选择货品"
+                placeholder="选择货品（选填）"
+                :z-index="999"
+                @confirm="(row) => onGoodsConfirm(item, row)"
+              />
+            </view>
+
             <view class="goods-spec-grid">
               <view class="spec-box">
                 <view class="spec-label">规格</view>
                 <input
                   v-model="item.spec"
                   class="spec-input"
-                  placeholder="请输入"
+                  :disabled="!!item.goodsId"
+                  :placeholder="item.goodsId ? '以货品档案为准' : '请输入'"
                 />
               </view>
               <view class="spec-box">
@@ -209,7 +264,12 @@ import {
   editDelivery,
   getDeliveryDetail,
   extractReceiver,
+  getDeliveryPersonList,
+  getGoodsList,
 } from "@/api/delivery";
+import { getCustomerPage, getCustomerBaseInfo } from "@/api/customer";
+import ApiSelectPicker from "@/components/ApiSelectPicker.vue";
+import ApiSelectScrollPicker from "@/components/ApiSelectScrollPicker.vue";
 
 const globalStore = useGlobalStore();
 
@@ -224,9 +284,14 @@ const isEdit = ref(false);
 const smartText = ref("");
 const isCollapse = ref(false);
 const submitting = ref(false);
+// 回显文本（选项未加载时展示）
+const selectedCustomerName = ref("");
+const selectedDeliveryPersonName = ref("");
 
 // 表单数据
 const formData = ref({
+  customerId: "",
+  deliveryPersonId: "",
   receiverName: "",
   receiverPhone: "",
   receiverAddress: "",
@@ -260,6 +325,8 @@ onLoad(async (options) => {
       const res = await getDeliveryDetail({ id: options.id });
       uni.hideLoading();
       if (res) {
+        formData.value.customerId = res.customerId || "";
+        formData.value.deliveryPersonId = res.deliveryPersonId || "";
         formData.value.receiverName = res.receiverName || "";
         formData.value.receiverPhone = res.receiverPhone || "";
         formData.value.receiverAddress = res.receiverAddress || "";
@@ -267,8 +334,11 @@ onLoad(async (options) => {
         formData.value.needReturnDevice = res.needReturnDevice !== "2";
         formData.value.logisticsCompany = res.logisticsCompany || "";
         formData.value.logisticsNo = res.logisticsNo || "";
+        selectedCustomerName.value = res.customerName || "";
+        selectedDeliveryPersonName.value = res.deliveryPersonName || "";
         if (res.itemList?.length) {
           goodsList.value = res.itemList.map((i) => ({
+            goodsId: i.goodsId || "",
             itemName: i.itemName || "",
             spec: i.spec || "",
             quantity: i.quantity != null ? String(i.quantity) : "",
@@ -283,6 +353,49 @@ onLoad(async (options) => {
     }
   }
 });
+
+// 客户选中：收货信息未填时默认从门店带出（新增覆盖，编辑只填空项）
+async function onCustomerConfirm(row) {
+  selectedCustomerName.value = row?.storeName || "";
+  if (!formData.value.customerId) {
+    selectedCustomerName.value = "";
+    return;
+  }
+  try {
+    const data = await getCustomerBaseInfo({ id: formData.value.customerId });
+    if (!data) return;
+    const fill = (key, val) => {
+      if (!val) return;
+      if (!isEdit.value || !formData.value[key]) {
+        formData.value[key] = val;
+      }
+    };
+    fill("receiverName", data.contactName);
+    fill("receiverPhone", data.contactPhone);
+    fill("receiverAddress", data.address);
+  } catch (err) {
+    console.error("获取门店基础信息失败", err);
+  }
+}
+
+// 货品标签格式化：名称 + 规格 + 库存数
+function goodsLabelFormat(item) {
+  const parts = [item.goodsName || "-"];
+  if (item.goodsModel) parts.push(item.goodsModel);
+  if (item.stockNum != null) parts.push(`库存:${item.stockNum}`);
+  return parts.join(" | ");
+}
+
+// 选中货品后回填名称/规格（服务端以货品档案为准）
+function onGoodsConfirm(item, row) {
+  if (row) {
+    item.itemName = row.goodsName || "";
+    item.spec = row.goodsModel || "";
+  } else {
+    item.itemName = "";
+    item.spec = "";
+  }
+}
 
 // 智能识别文本
 const handleRecognize = async () => {
@@ -330,6 +443,7 @@ const handleRecognize = async () => {
 // 清单操作
 const addItem = () => {
   goodsList.value.push({
+    goodsId: "",
     itemName: "",
     spec: "",
     quantity: "",
@@ -381,12 +495,20 @@ const handleSubmit = async () => {
     remark: formData.value.remark || "",
     needReturnDevice: formData.value.needReturnDevice ? "1" : "2",
     itemList: validItems.map((i) => ({
+      goodsId: i.goodsId || undefined,
       itemName: i.itemName,
       quantity: Number(i.quantity) || 0,
       spec: i.spec || "",
       unit: i.unit || "",
     })),
   };
+
+  if (formData.value.customerId) {
+    payload.customerId = formData.value.customerId;
+  }
+  if (formData.value.deliveryPersonId) {
+    payload.deliveryPersonId = formData.value.deliveryPersonId;
+  }
 
   // 发货人员提交物流信息
   if (isDeliveryPerson.value) {
@@ -539,6 +661,16 @@ const handleSubmit = async () => {
     margin-bottom: 30rpx;
   }
 
+  .customer-select-row {
+    margin-bottom: 30rpx;
+    .field-lbl {
+      font-size: 28rpx;
+      color: #1a1a1a;
+      font-weight: 500;
+      margin-bottom: 16rpx;
+    }
+  }
+
   .remark-section {
     .remark-label {
       font-size: 28rpx;
@@ -671,9 +803,14 @@ const handleSubmit = async () => {
 
       .goods-name-input {
         flex: 1;
-        font-size: 32rpx;
+        font-size: 30rpx;
         font-weight: 500;
         color: #1a1a1a;
+        background-color: #f7f8fa;
+        border-radius: 12rpx;
+        padding: 12rpx 20rpx;
+        height: 64rpx;
+        box-sizing: border-box;
       }
 
       .goods-actions {
@@ -694,6 +831,10 @@ const handleSubmit = async () => {
     }
 
     /* 三列规格网格布局 */
+    .goods-picker {
+      margin-bottom: 20rpx;
+    }
+
     .goods-spec-grid {
       display: grid;
       grid-template-columns: 1fr 1fr 1fr;

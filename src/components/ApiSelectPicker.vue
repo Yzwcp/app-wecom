@@ -5,7 +5,14 @@
         displayLabel
       }}</text>
       <text v-else class="api-select__placeholder">{{ placeholder }}</text>
-      <wd-icon name="arrow" size="14px" color="#999" />
+      <wd-icon
+        v-if="clearable && hasValue"
+        name="close-circle"
+        color="#2A2B2E"
+        size="24px"
+        @click.stop="onClear"
+      ></wd-icon>
+      <wd-icon v-else color="#2A2B2E" name="right" size="24px"></wd-icon>
     </view>
     <wd-select-picker
       filterable
@@ -65,6 +72,8 @@ const props = defineProps({
   zIndex: { type: Number, default: 10 },
   /** 禁止选中的 value 列表（如转派时排除当前执行人） */
   disabledValues: { type: Array, default: () => [] },
+  /** 是否可清除（默认开启，右侧显示清除按钮） */
+  clearable: { type: Boolean, default: true },
 });
 
 const emit = defineEmits(["update:modelValue", "confirm", "update:visible"]);
@@ -130,6 +139,21 @@ const displayLabel = computed(() => {
   const item = options.value.find((c) => c.value === innerValue.value);
   // 选项未加载时，使用外部预设的 label 回显
   return item ? item.label : props.label;
+});
+
+function onClear() {
+  innerValue.value = props.type === "checkbox" ? [] : "";
+  emit("update:modelValue", innerValue.value);
+  emit("confirm", undefined);
+  closeGuard = true;
+  setTimeout(() => {
+    closeGuard = false;
+  }, 300);
+}
+
+const hasValue = computed(() => {
+  if (Array.isArray(props.modelValue)) return props.modelValue.length > 0;
+  return props.modelValue !== "" && props.modelValue != null;
 });
 
 function buildParams() {

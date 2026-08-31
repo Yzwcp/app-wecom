@@ -113,14 +113,14 @@
           >
             发布
           </button>
-          <button
+          <!-- <button
             class="btn btn-primary"
             style="background-color: #ff7043"
             @click="goToDelivery(item)"
             v-if="item.status === 'COMPLETED'"
           >
             发货
-          </button>
+          </button> -->
           <button
             class="btn btn-primary"
             v-if="item.status !== 'UNPUBLISHED'"

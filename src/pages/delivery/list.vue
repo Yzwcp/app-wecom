@@ -3,16 +3,20 @@
     <!-- 顶部状态切换 Tabs -->
     <view class="tabs-container" id="listTop">
       <wd-tabs
+        v-if="tabsList?.length > 0"
         v-model="activeTab"
         animated
         color="#2979ff"
         inactive-color="#666"
         @change="handleTabChange"
       >
-        <wd-tab title="全部" name="ALL"></wd-tab>
-        <wd-tab title="我申请的" name="APPLY"></wd-tab>
-        <wd-tab title="待我审核" name="AUDIT"></wd-tab>
-        <wd-tab title="待我发货" name="DELIVERY"></wd-tab>
+        <wd-tab title="全部" name="all"></wd-tab>
+        <wd-tab
+          v-for="item in tabsList"
+          :key="item.value"
+          :title="item.label"
+          :name="item.value"
+        ></wd-tab>
       </wd-tabs>
     </view>
 
@@ -33,7 +37,7 @@
           class="status-badge"
           :class="`status-bg-${getStatusClass(item.status)}`"
         >
-          {{ item.statusName }}
+          {{ item.statusName || getStatusText(item.status) }}
         </view>
 
         <!-- 物流单号 -->
@@ -84,7 +88,10 @@
         </view>
 
         <!-- 驳回原因 -->
-        <view class="info-row" v-if="item.status === 'REJECTED' && item.rejectReason">
+        <view
+          class="info-row"
+          v-if="item.status === 'REJECTED' && item.rejectReason"
+        >
           <view class="field-label">驳回原因</view>
           <view class="field-value reject-reason">{{ item.rejectReason }}</view>
         </view>
@@ -92,25 +99,25 @@
         <!-- 底部操作按钮 -->
         <view class="action-bar">
           <button
-            v-if="item.status === 'APPLY'"
+            v-if="item.status === 'PENDING_AUDIT'"
             class="btn btn-danger"
             @click="handleAction('audit', item)"
           >
             审核
           </button>
           <button
-            v-if="item.status === 'AUDIT'"
+            v-if="item.status === 'PENDING_DELIVERY'"
             class="btn btn-primary"
             @click="handleAction('deliver', item)"
           >
             确认发货
           </button>
           <button
-            v-if="item.status === 'DELIVERY'"
+            v-if="item.status === 'DELIVERED'"
             class="btn btn-primary"
             @click="handleAction('receive', item)"
           >
-            签收
+            确认签收
           </button>
           <button class="btn btn-outline" @click="goToDetail(item)">
             查看详情
@@ -142,19 +149,117 @@
     </scroll-view>
 
     <!-- 悬浮新建发货按钮 -->
-    <!-- <view class="fab-btn" @click="goToAdd">
-      <text class="fab-icon">+</text>
-    </view> -->
+    <view class="fab-add" @click="goToAdd">
+      <text class="fab-plus">+</text>
+    </view>
+
+    <!-- 审核弹窗 -->
+    <wd-popup
+      v-model="showAudit"
+      position="bottom"
+      :safe-area-inset-bottom="true"
+      custom-style="border-radius: 24rpx 24rpx 0 0;"
+      @close="closeAudit"
+    >
+      <view class="action-popup">
+        <view class="popup-header">
+          <text class="popup-title">审核发货单</text>
+          <wd-icon name="close" size="20px" color="#999" @click="closeAudit" />
+        </view>
+        <view class="popup-body">
+          <view class="popup-label">审核结果</view>
+          <wd-radio-group v-model="auditForm.result" direction="horizontal">
+            <wd-radio value="PASS">通过</wd-radio>
+            <wd-radio value="REJECT">驳回</wd-radio>
+          </wd-radio-group>
+          <view class="popup-label" v-if="auditForm.result === 'REJECT'">
+            驳回原因
+          </view>
+          <textarea
+            v-if="auditForm.result === 'REJECT'"
+            v-model="auditForm.rejectReason"
+            placeholder="请输入驳回原因"
+            placeholder-class="placeholder-style"
+            class="popup-textarea"
+          />
+        </view>
+        <view class="popup-footer">
+          <button class="btn-cancel" @click="closeAudit">取消</button>
+          <button
+            class="btn-submit"
+            :disabled="actionSubmitting"
+            @click="confirmAudit"
+          >
+            {{ actionSubmitting ? "提交中..." : "确定" }}
+          </button>
+        </view>
+      </view>
+    </wd-popup>
+
+    <!-- 确认发货弹窗 -->
+    <wd-popup
+      v-model="showDeliver"
+      position="bottom"
+      :safe-area-inset-bottom="true"
+      custom-style="border-radius: 24rpx 24rpx 0 0;"
+      @close="closeDeliver"
+    >
+      <view class="action-popup">
+        <view class="popup-header">
+          <text class="popup-title">确认发货</text>
+          <wd-icon
+            name="close"
+            size="20px"
+            color="#999"
+            @click="closeDeliver"
+          />
+        </view>
+        <view class="popup-body">
+          <view class="popup-label">物流公司</view>
+          <wd-input
+            v-model="deliverForm.logisticsCompany"
+            placeholder="请输入物流公司"
+            no-border
+            custom-class="popup-input"
+          />
+          <view class="popup-label" style="margin-top: 24rpx">物流单号</view>
+          <wd-input
+            v-model="deliverForm.logisticsNo"
+            placeholder="请输入物流单号"
+            no-border
+            custom-class="popup-input"
+          />
+        </view>
+        <view class="popup-footer">
+          <button class="btn-cancel" @click="closeDeliver">取消</button>
+          <button
+            class="btn-submit"
+            :disabled="actionSubmitting"
+            @click="confirmDeliver"
+          >
+            {{ actionSubmitting ? "提交中..." : "确定" }}
+          </button>
+        </view>
+      </view>
+    </wd-popup>
   </view>
 </template>
 
 <script setup>
-import { ref, nextTick } from "vue";
+import { ref, nextTick, computed } from "vue";
 import { getElementHeight } from "@/utils/tools";
 import { onLoad } from "@dcloudio/uni-app";
-import { getDeliveryPage } from "@/api/delivery";
+import {
+  getDeliveryPage,
+  auditDelivery,
+  deliverDelivery,
+  receiveDelivery,
+} from "@/api/delivery";
+import { useDict } from "@/hooks/useDict";
 
-const activeTab = ref("ALL");
+const { dictMap, getDictLabel } = useDict();
+
+const activeTab = ref("all");
 const topHeight = ref(0);
 
 const taskList = ref([]);
@@ -165,20 +270,25 @@ const loading = ref(false);
 const isRefreshing = ref(false);
 const loadMoreStatus = ref("");
 
-const STATUS_MAP = {
-  APPLY: { text: "待审核", cls: "audit" },
-  AUDIT: { text: "待发货", cls: "progress" },
-  DELIVERY: { text: "已发货", cls: "pending" },
-  RECEIVE: { text: "已完成", cls: "completed" },
-  REJECTED: { text: "已驳回", cls: "rejected" },
+// 字典：实现动态 Tab 列表
+const tabsList = computed(() => dictMap["WJ_DELIVERY_TASK_STATUS"] || []);
+
+// 状态值到 CSS 类名的映射（每个状态不同颜色）
+const STATUS_VISUAL_MAP = {
+  DRAFT: "draft",
+  PENDING_AUDIT: "audit",
+  PENDING_DELIVERY: "progress",
+  DELIVERED: "pending",
+  COMPLETED: "completed",
+  REJECTED: "rejected",
 };
 
 function getStatusClass(status) {
-  return STATUS_MAP[status]?.cls || "other";
+  return STATUS_VISUAL_MAP[status] || "other";
 }
 
 function getStatusText(status) {
-  return STATUS_MAP[status]?.text || "未知";
+  return getDictLabel("WJ_DELIVERY_TASK_STATUS", status) || "未知";
 }
 
 async function fetchList(isReset = false) {
@@ -194,8 +304,8 @@ async function fetchList(isReset = false) {
     size: size.value,
   };
 
-  if (activeTab.value !== "ALL") {
-    params.type = activeTab.value;
+  if (activeTab.value !== "all") {
+    params.status = activeTab.value;
   }
 
   try {
@@ -237,7 +347,7 @@ function handleTabChange({ name }) {
 
 function goToDetail(item) {
   // 待发货或驳回状态可编辑，跳转表单页
-  if (item.status === "AUDIT" || item.status === "REJECTED") {
+  if (item.status === "PENDING_DELIVERY" || item.status === "REJECTED") {
     uni.navigateTo({
       url: `/pages/delivery/form?id=${item.id}`,
     });
@@ -248,8 +358,112 @@ function goToDetail(item) {
   }
 }
 
-function handleAction(actionType, item) {
-  console.log(`触发了 ${actionType} 操作，数据为：`, item);
+// 审核/发货弹窗状态
+const showAudit = ref(false);
+const showDeliver = ref(false);
+const actionSubmitting = ref(false);
+const currentItem = ref(null);
+const auditForm = ref({ result: "PASS", rejectReason: "" });
+const deliverForm = ref({ logisticsCompany: "", logisticsNo: "" });
+
+function closeAudit() {
+  showAudit.value = false;
+  auditForm.value = { result: "PASS", rejectReason: "" };
+}
+
+function closeDeliver() {
+  showDeliver.value = false;
+  deliverForm.value = { logisticsCompany: "", logisticsNo: "" };
+}
+
+async function confirmAudit() {
+  if (
+    auditForm.value.result === "REJECT" &&
+    !auditForm.value.rejectReason.trim()
+  ) {
+    uni.showToast({ title: "请输入驳回原因", icon: "none" });
+    return;
+  }
+  actionSubmitting.value = true;
+  try {
+    await auditDelivery({
+      id: currentItem.value.id,
+      result: auditForm.value.result,
+      rejectReason:
+        auditForm.value.result === "REJECT"
+          ? auditForm.value.rejectReason.trim()
+          : "",
+    });
+    uni.showToast({ title: "审核成功", icon: "success" });
+    closeAudit();
+    fetchList(true);
+  } catch (error) {
+    console.error("审核失败", error);
+  } finally {
+    actionSubmitting.value = false;
+  }
+}
+
+async function confirmDeliver() {
+  if (!deliverForm.value.logisticsCompany.trim()) {
+    uni.showToast({ title: "请输入物流公司", icon: "none" });
+    return;
+  }
+  if (!deliverForm.value.logisticsNo.trim()) {
+    uni.showToast({ title: "请输入物流单号", icon: "none" });
+    return;
+  }
+  actionSubmitting.value = true;
+  try {
+    await deliverDelivery({
+      id: currentItem.value.id,
+      logisticsCompany: deliverForm.value.logisticsCompany.trim(),
+      logisticsNo: deliverForm.value.logisticsNo.trim(),
+    });
+    uni.showToast({ title: "发货成功", icon: "success" });
+    closeDeliver();
+    fetchList(true);
+  } catch (error) {
+    console.error("确认发货失败", error);
+  } finally {
+    actionSubmitting.value = false;
+  }
+}
+
+async function handleAction(actionType, item) {
+  if (actionType === "audit") {
+    currentItem.value = item;
+    auditForm.value = { result: "PASS", rejectReason: "" };
+    showAudit.value = true;
+    return;
+  }
+  if (actionType === "deliver") {
+    currentItem.value = item;
+    deliverForm.value = {
+      logisticsCompany: item.logisticsCompany || "",
+      logisticsNo: item.logisticsNo || "",
+    };
+    showDeliver.value = true;
+    return;
+  }
+  if (actionType === "receive") {
+    uni.showModal({
+      title: "签收确认",
+      content: "确定签收该发货单吗？",
+      confirmText: "确定",
+      cancelText: "取消",
+      success: async (res) => {
+        if (!res.confirm) return;
+        try {
+          await receiveDelivery({ id: item.id });
+          uni.showToast({ title: "签收成功", icon: "success" });
+          fetchList(true);
+        } catch (error) {
+          console.error("签收失败", error);
+        }
+      },
+    });
+  }
 }
 
 // 跳转到新建发货表单
@@ -313,6 +527,9 @@ onLoad(async () => {
   font-weight: 500;
   border-bottom-left-radius: 24rpx;
 
+  &.status-bg-draft {
+    background: #9ca3af;
+  }
   &.status-bg-pending {
     background: #2979ff;
   }
@@ -349,6 +566,10 @@ onLoad(async () => {
     height: 16rpx;
     border-radius: 50%;
     margin-right: 16rpx;
+  }
+  .status-dot-draft {
+    background-color: #9ca3af;
+    box-shadow: 0 0 8rpx rgba(156, 163, 175, 0.5);
   }
   .status-dot-pending {
     background-color: #2979ff;
@@ -513,33 +734,110 @@ onLoad(async () => {
 }
 
 .safe-bottom {
-  height: 60rpx;
+  height: 140rpx;
+}
+
+/* 审核/发货弹窗 */
+.action-popup {
+  padding: 32rpx;
+  background-color: #ffffff;
+
+  .popup-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 32rpx;
+
+    .popup-title {
+      font-size: 32rpx;
+      font-weight: 600;
+      color: #333;
+    }
+  }
+
+  .popup-body {
+    margin-bottom: 32rpx;
+
+    .popup-label {
+      font-size: 28rpx;
+      color: #666;
+      margin-bottom: 16rpx;
+    }
+
+    .popup-textarea {
+      width: 100%;
+      min-height: 160rpx;
+      background-color: #f8f9fa;
+      border-radius: 12rpx;
+      padding: 20rpx 24rpx;
+      font-size: 28rpx;
+      box-sizing: border-box;
+    }
+
+    :deep(.popup-input) {
+      background-color: #f8f9fa;
+      border-radius: 12rpx;
+      padding: 20rpx 24rpx;
+      font-size: 28rpx;
+    }
+  }
+
+  .popup-footer {
+    display: flex;
+    gap: 24rpx;
+
+    .btn-cancel {
+      flex: 1;
+      height: 80rpx;
+      line-height: 80rpx;
+      background-color: #f5f5f5;
+      color: #666;
+      font-size: 30rpx;
+      border-radius: 40rpx;
+      border: none;
+    }
+
+    .btn-submit {
+      flex: 1;
+      height: 80rpx;
+      line-height: 80rpx;
+      background-color: #2979ff;
+      color: #ffffff;
+      font-size: 30rpx;
+      border-radius: 40rpx;
+      border: none;
+
+      &:disabled {
+        opacity: 0.6;
+      }
+    }
+  }
 }
 
 /* 悬浮新建按钮 */
-.fab-btn {
+.fab-add {
   position: fixed;
   right: 40rpx;
-  bottom: 100rpx;
-  width: 100rpx;
-  height: 100rpx;
+  bottom: 80rpx;
+  width: 96rpx;
+  height: 96rpx;
   border-radius: 50%;
-  background: #2979ff;
-  color: #ffffff;
+  background-color: #2979ff;
+  box-shadow: 0 8rpx 24rpx rgba(41, 121, 255, 0.35);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 8rpx 24rpx rgba(41, 121, 255, 0.4);
   z-index: 99;
 
   &:active {
-    transform: scale(0.92);
+    opacity: 0.85;
   }
 
-  .fab-icon {
-    font-size: 52rpx;
-    font-weight: 300;
+  .fab-plus {
+    color: #ffffff;
+    font-size: 56rpx;
     line-height: 1;
+    margin-top: -6rpx;
   }
 }
 </style>
