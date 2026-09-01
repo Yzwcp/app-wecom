@@ -128,7 +128,7 @@ const menuConfig = {
   },
   "/pages/message/message": {
     label: "消息中心",
-    icon: "/static/index/message.png",
+    icon: "/static/index/message.png?a=1",
     bg: "message-bg",
     iconBox: "message-icon-box",
     textColor: "text-green",
@@ -299,7 +299,6 @@ onLoad(() => {
     width: 150rpx;
     line-height: 50rpx;
     text-align: center;
-    padding-bottom: 6rpx;
     .clear-text {
       font-size: 24rpx;
       color: #ffffff;

@@ -222,47 +222,37 @@
               材料名称
               <text class="red">*</text>
             </view>
-            <view
-              class="goods-picker-trigger"
-              :class="{ 'picker-disabled': pageMode === 'view' }"
-              @click="pageMode !== 'view' && openGoodsPicker(index)"
-            >
-              <text v-if="item.materialName" class="goods-name">
-                {{ item.materialName }}
-              </text>
-              <text v-else class="goods-placeholder">请选择货品</text>
-              <wd-icon name="arrow" size="14px" color="#999" />
+            <view class="name-input-row">
+              <wd-input
+                v-model="item.materialName"
+                placeholder="请输入材料名称"
+                no-border
+                :readonly="pageMode === 'view'"
+                custom-class="form-input-bg material-input-bg"
+              />
+              <view
+                v-if="pageMode !== 'view'"
+                class="goods-select-btn"
+                @click="openGoodsPicker(index)"
+              >
+                选择
+              </view>
             </view>
           </view>
 
-          <view class="two-col">
-            <view class="field-block flex-1">
-              <view class="field-lbl">
-                数量
-                <text class="red">*</text>
-              </view>
-              <wd-input
-                v-model="item.quantity"
-                type="number"
-                placeholder="数量"
-                no-border
-                :readonly="pageMode === 'view'"
-                custom-class="form-input-bg material-input-bg"
-              />
+          <view class="field-block">
+            <view class="field-lbl">
+              数量
+              <text class="red">*</text>
             </view>
-            <view class="field-block flex-1">
-              <view class="field-lbl">
-                单位
-                <text class="red">*</text>
-              </view>
-              <wd-input
-                v-model="item.unit"
-                placeholder="如：米、个"
-                no-border
-                :readonly="pageMode === 'view'"
-                custom-class="form-input-bg material-input-bg"
-              />
-            </view>
+            <wd-input
+              v-model="item.quantity"
+              type="number"
+              placeholder="数量"
+              no-border
+              :readonly="pageMode === 'view'"
+              custom-class="form-input-bg material-input-bg"
+            />
           </view>
 
           <view class="two-col">
@@ -635,10 +625,6 @@ async function handleSave(saveType) {
       uni.showToast({ title: `第${i + 1}条数量不能为空`, icon: "none" });
       return;
     }
-    if (!m.unit) {
-      uni.showToast({ title: `第${i + 1}条单位不能为空`, icon: "none" });
-      return;
-    }
   }
 
   uni.showLoading({ title: "保存中..." });
@@ -729,7 +715,6 @@ function newMaterial() {
     purchasePrice: 0,
     quantity: "",
     remark: "",
-    unit: "",
   };
 }
 
@@ -1202,32 +1187,28 @@ onLoad(() => {
   }
 }
 
-/* 货品选择器触发框 */
-.goods-picker-trigger {
+/* 材料名称：输入框 + 选择按钮 */
+.name-input-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  background-color: #ffffff;
-  border: 2rpx solid #dfe2e8;
+  gap: 16rpx;
+
+  :deep(.wd-input) {
+    flex: 1;
+  }
+}
+
+.goods-select-btn {
+  flex-shrink: 0;
+  padding: 16rpx 32rpx;
+  background-color: #0066ff;
+  color: #ffffff;
+  font-size: 26rpx;
   border-radius: 12rpx;
-  padding: 20rpx 24rpx;
-  min-height: 48rpx;
+  text-align: center;
 
-  &.picker-disabled {
-    opacity: 0.6;
-    pointer-events: none;
-  }
-
-  .goods-name {
-    font-size: 28rpx;
-    color: #333;
-    flex: 1;
-  }
-
-  .goods-placeholder {
-    font-size: 28rpx;
-    color: #999;
-    flex: 1;
+  &:active {
+    opacity: 0.8;
   }
 }
 

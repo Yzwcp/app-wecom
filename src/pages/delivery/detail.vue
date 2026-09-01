@@ -8,9 +8,9 @@
     <template v-if="!loading && detail">
       <!-- 状态头部 -->
       <view class="status-header" :class="`header-${statusCls}`">
-        <view class="status-icon">
+        <!-- <view class="status-icon">
           <wd-icon :name="statusIcon" size="48rpx" color="#fff" />
-        </view>
+        </view> -->
         <view class="status-info">
           <text class="status-text">{{
             detail.statusName || getStatusText(detail.status)
@@ -92,7 +92,7 @@
 
     <!-- 底部固定操作栏 -->
     <view class="footer-actions" v-if="detail">
-      <button
+      <!-- <button
         v-if="
           detail.needReturnDevice === '1' &&
           detail.returnStatus === 'NOT_RETURNED'
@@ -101,7 +101,7 @@
         @click="handleReturnDevice"
       >
         确认寄回
-      </button>
+      </button> -->
       <button class="btn-back" @click="goBack">返回</button>
     </view>
   </view>

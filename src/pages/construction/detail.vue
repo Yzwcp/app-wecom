@@ -390,18 +390,38 @@ function handleAction(type, record) {
 }
 
 function goExecute(sub) {
-  //   uni.navigateTo({
-  //     url: `/pages/construction/record?id=${task.value.id}&subTaskId=${sub.id}`,
-  //   });
-  uni.$router.push({
-    url: "/pages/construction/record",
-    query: {
-      taskId: task.value.id,
-      subTaskId: sub.id,
-      customerId: task.value.customerId,
-      mode: "create",
-    },
-  });
+  // 检查当天是否已有该子任务的施工记录
+  const today = formatDate(new Date());
+  const todayRecord = visitList.value.find(
+    (v) =>
+      v.subTaskId === sub.id &&
+      v.createTime &&
+      formatDate(new Date(v.createTime)) === today,
+  );
+
+  if (todayRecord) {
+    // 有当天记录，直接跳转查看（与点击"去查看"行为一致）
+    handleAction("view", todayRecord);
+  } else {
+    // 无当天记录，跳转新建
+    uni.$router.push({
+      url: "/pages/construction/record",
+      query: {
+        taskId: task.value.id,
+        subTaskId: sub.id,
+        customerId: task.value.customerId,
+        mode: "create",
+      },
+    });
+  }
+}
+
+// 格式化日期为 YYYY-MM-DD
+function formatDate(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 // ========== 转派 ==========

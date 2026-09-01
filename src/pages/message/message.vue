@@ -390,6 +390,7 @@ onShow(() => {
   .msg-desc {
     font-size: 26rpx;
     color: #666666;
+    width: 500rpx;
     line-height: 1.5;
     margin-bottom: 16rpx;
     overflow: hidden;

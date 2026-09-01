@@ -109,13 +109,27 @@
             v-if="item.status === 'PENDING_DELIVERY'"
             class="btn btn-primary"
             @click="handleAction('deliver', item)"
+            v-has="'WJ_DELIVERY_PERSON'"
           >
             确认发货
+          </button>
+          <button
+            v-if="
+              item.status === 'COMPLETED' &&
+              item.needReturnDevice === '1' &&
+              item.returnStatus === 'NOT_RETURNED'
+            "
+            class="btn btn-primary"
+            @click="handleAction('returnDevice', item)"
+            v-has="'WJ_DELIVERY_PERSON'"
+          >
+            确认回寄
           </button>
           <button
             v-if="item.status === 'DELIVERED'"
             class="btn btn-primary"
             @click="handleAction('receive', item)"
+            v-has="'WJ_DELIVERY_PERSON'"
           >
             确认签收
           </button>
@@ -248,12 +262,13 @@
 <script setup>
 import { ref, nextTick, computed } from "vue";
 import { getElementHeight } from "@/utils/tools";
-import { onLoad } from "@dcloudio/uni-app";
+import { onLoad, onShow } from "@dcloudio/uni-app";
 import {
   getDeliveryPage,
   auditDelivery,
   deliverDelivery,
   receiveDelivery,
+  returnDeviceDelivery,
 } from "@/api/delivery";
 import { useDict } from "@/hooks/useDict";
 
@@ -464,6 +479,24 @@ async function handleAction(actionType, item) {
       },
     });
   }
+  if (actionType === "returnDevice") {
+    uni.showModal({
+      title: "回寄确认",
+      content: "确定回寄该发货单吗？",
+      confirmText: "确定",
+      cancelText: "取消",
+      success: async (res) => {
+        if (!res.confirm) return;
+        try {
+          await returnDeviceDelivery({ id: item.id });
+          uni.showToast({ title: "操作成功", icon: "success" });
+          fetchList(true);
+        } catch (error) {
+          console.error("回寄失败", error);
+        }
+      },
+    });
+  }
 }
 
 // 跳转到新建发货表单
@@ -473,7 +506,7 @@ function goToAdd() {
   });
 }
 
-onLoad(async () => {
+onShow(async () => {
   await nextTick();
   topHeight.value = await getElementHeight("#listTop");
   fetchList(true);
@@ -671,7 +704,7 @@ onLoad(async () => {
     margin: 0;
     padding: 0 36rpx;
     height: 64rpx;
-    line-height: 60rpx;
+    line-height: 64rpx;
     font-size: 26rpx;
     border-radius: 12rpx;
     box-sizing: border-box;
@@ -827,7 +860,7 @@ onLoad(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 99;
+  z-index: 10;
 
   &:active {
     opacity: 0.85;

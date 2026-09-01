@@ -7,12 +7,13 @@ import { useGlobalStore } from "@/store/global";
  */
 export function hasAuth(codes) {
   const globalStore = useGlobalStore();
-  const btnList = globalStore.userInfo?.mobileButtonCodeList || [];
+  const btnList = globalStore.userInfo?.roleCodeList || [];
 
   if (!codes || (Array.isArray(codes) && codes.length === 0)) {
     return true;
   }
 
   const codeList = Array.isArray(codes) ? codes : [codes];
+
   return codeList.some((code) => btnList.includes(code));
 }
