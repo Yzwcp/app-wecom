@@ -67,20 +67,6 @@
           />
         </view>
 
-        <!-- 审核人 -->
-        <view class="field-block">
-          <view class="field-lbl">审核人</view>
-          <ApiSelectPicker
-            v-model="form.auditorId"
-            :api="getConstructionAuditorList"
-            label-key="name"
-            value-key="id"
-            title="选择审核人"
-            placeholder="请选择审核人"
-            :z-index="999"
-          />
-        </view>
-
         <!-- 计划完工时限 -->
         <view class="field-block">
           <view class="field-lbl">计划完工时限</view>
@@ -222,7 +208,6 @@ import {
   getConstructionTaskDetail,
   getConstructionTaskTemplateList,
   getConstructionExecutorList,
-  getConstructionAuditorList,
 } from "@/api/construction";
 import { effectivePage } from "@/api/contract";
 import { getCustomerPage } from "@/api/customer";
@@ -263,7 +248,6 @@ async function loadDetail(id) {
       customerId: task.customerId || "",
       templateId: task.templateId || "",
       taskType: task.taskType || "",
-      auditorId: task.auditorId || "",
       planFinishTime: task.planFinishTime || "",
       taskRequire: task.taskRequire || "",
       subTaskList: subTaskList.map((s, i) => ({
@@ -423,7 +407,6 @@ async function handleSubmit() {
     customerId: form.value.customerId || undefined,
     templateId: form.value.templateId || undefined,
     taskType: form.value.taskType,
-    auditorId: form.value.auditorId || undefined,
     planFinishTime: form.value.planFinishTime || undefined,
     taskRequire: form.value.taskRequire || undefined,
     subTaskList: form.value.subTaskList.map((s, i) => ({

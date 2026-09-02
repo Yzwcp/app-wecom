@@ -56,10 +56,6 @@ export function getConstructionTaskTemplateList(data) {
 export function getConstructionExecutorList(data) {
   return get("/wjapp/wjMobile/constructionTask/executorList", data);
 }
-// 移动端施工审核员列表
-export function getConstructionAuditorList(data) {
-  return get("/wjapp/wjMobile/constructionTask/auditorList", data);
-}
 // 施工任务详情
 export function getConstructionTaskDetail(data) {
   return get("/wjapp/wjMobile/constructionTask/detail", data);
@@ -75,6 +71,10 @@ export function publishConstructionTask(data) {
 // 转派子任务
 export function transferConstructionTask(data) {
   return post("/wjapp/wjMobile/constructionTask/transfer", data);
+}
+// 删除施工任务（仅未发布可删，仅施工管理员）
+export function deleteConstructionTask(data) {
+  return post("/wjapp/wjMobile/constructionTask/delete", data);
 }
 
 // 货品列表（材料选择）

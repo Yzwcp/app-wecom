@@ -91,23 +91,25 @@
 
         <!-- 底部操作按钮 -->
         <view class="action-bar">
-          <!-- <button
-            class="btn btn-outline"
-            @click="handleAction('supplement', item)"
-          >
-            补充资料
-          </button> -->
           <button
             class="btn btn-outline"
-            v-has="'mobileWjConstructionTaskEdit'"
+            v-has="'WJ_CONSTRUCTION_MANAGER'"
             @click="handleEdit(item)"
           >
             编辑
           </button>
           <button
+            class="btn btn-outline"
+            v-has="'WJ_CONSTRUCTION_MANAGER'"
+            v-if="item.status === 'UNPUBLISHED'"
+            @click="handleDelete(item)"
+          >
+            删除
+          </button>
+          <button
             class="btn btn-primary"
             style="background-color: #07c160"
-            v-has="'mobileWjConstructionTaskPublish'"
+            v-has="'WJ_CONSTRUCTION_MANAGER'"
             @click="handlePublish(item)"
             v-if="item.status === 'UNPUBLISHED'"
           >
@@ -121,6 +123,13 @@
           >
             发货
           </button> -->
+          <button
+            class="btn btn-outline"
+            style="color: #2979ff; border-color: #2979ff"
+            @click="goToExtraInfo(item)"
+          >
+            客户信息
+          </button>
           <button
             class="btn btn-primary"
             v-if="item.status !== 'UNPUBLISHED'"
@@ -157,11 +166,7 @@
     </scroll-view>
 
     <!-- 右下角新建按钮 -->
-    <view
-      class="fab-add"
-      v-has="'mobileWjConstructionTaskAdd'"
-      @click="goToCreate"
-    >
+    <view class="fab-add" v-has="'WJ_CONSTRUCTION_MANAGER'" @click="goToCreate">
       <text class="fab-plus">+</text>
     </view>
   </view>
@@ -174,6 +179,7 @@ import { onLoad } from "@dcloudio/uni-app";
 import {
   getConstructionMyPage,
   publishConstructionTask,
+  deleteConstructionTask,
 } from "@/api/construction";
 import { useGlobalStore } from "@/store/global";
 import { useDict } from "@/hooks/useDict";
@@ -294,6 +300,16 @@ function goToDetail(item) {
   });
 }
 
+// 跳转到客户信息页
+function goToExtraInfo(item) {
+  uni.$router.push({
+    url: "/pages/customer/extraInfo/info",
+    query: {
+      customerId: item.customerId,
+    },
+  });
+}
+
 // 补充资料操作
 function handleAction(actionType, item) {
   console.log(`触发了 ${actionType} 操作，数据为：`, item);
@@ -339,6 +355,27 @@ function handlePublish(item) {
         fetchList(true);
       } catch (error) {
         console.error("发布施工任务失败", error);
+      }
+    },
+  });
+}
+
+// 删除施工任务（仅未发布可删）
+function handleDelete(item) {
+  uni.showModal({
+    title: "删除确认",
+    content: `确定删除任务「${item.taskNo}」吗？删除后不可恢复`,
+    confirmText: "删除",
+    confirmColor: "#ee0a24",
+    cancelText: "取消",
+    success: async (res) => {
+      if (!res.confirm) return;
+      try {
+        await deleteConstructionTask({ id: item.id });
+        uni.showToast({ title: "删除成功", icon: "success" });
+        fetchList(true);
+      } catch (error) {
+        console.error("删除施工任务失败", error);
       }
     },
   });

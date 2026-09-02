@@ -137,7 +137,7 @@
                 去执行
               </view>
               <view
-                v-if="sub.status === 'PENDING'"
+                v-if="sub.status === 'PENDING' && canTransfer(sub)"
                 class="transfer-btn"
                 @click="openTransfer(sub)"
               >
@@ -195,9 +195,9 @@
       </view>
     </view>
 
-    <!-- 完工提交悬浮按钮 -->
+    <!-- 完工提交悬浮按钮（负责人或施工管理员可完工） -->
     <view
-      v-if="allSubTasksCompleted && task.status === 'EXECUTING'"
+      v-if="allSubTasksCompleted && task.status === 'EXECUTING' && canSubmit"
       class="submit-fab"
       @click="handleSubmitConstruction"
     >
@@ -271,8 +271,17 @@ import {
 import { openLocation } from "@/utils/wx";
 import ApiSelectPicker from "@/components/ApiSelectPicker.vue";
 import { useDict } from "@/hooks/useDict";
+import { useGlobalStore } from "@/store/global";
 
+const globalStore = useGlobalStore();
 const { dictMap, getDictLabel } = useDict();
+
+// 当前登录人信息
+const loginUser = computed(() => globalStore.userInfo || {});
+// 是否施工管理员
+const isConstructionManager = computed(() =>
+  (loginUser.value.roleCodeList || []).includes("WJ_CONSTRUCTION_MANAGER"),
+);
 
 const task = ref({});
 const subTaskList = ref([]);
@@ -336,6 +345,21 @@ const allSubTasksCompleted = computed(() => {
     subTaskList.value.every((sub) => sub.status === "COMPLETED")
   );
 });
+
+// 负责人或施工管理员可完工确认
+const canSubmit = computed(() => {
+  if (isConstructionManager.value) return true;
+  const uid = loginUser.value.id || loginUser.value.userId;
+  const managerId = task.value.managerId || task.value.operatorId;
+  return !!uid && !!managerId && uid === managerId;
+});
+
+// 施工管理员可转派任意子任务；其他人仅自己执行的子任务可转派
+function canTransfer(sub) {
+  if (isConstructionManager.value) return true;
+  const uid = loginUser.value.id || loginUser.value.userId;
+  return !!uid && (sub.executorIdList || []).includes(uid);
+}
 
 async function handleSubmitConstruction() {
   try {
