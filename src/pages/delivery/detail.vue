@@ -82,6 +82,25 @@
           <text class="goods-qty">{{ item.quantity }}{{ item.unit }}</text>
         </view>
       </view>
+
+      <!-- 回收明细卡片 -->
+      <view class="info-card" v-if="detail.returnItemList?.length">
+        <view class="card-title">回收明细</view>
+        <view
+          class="goods-item"
+          v-for="(item, idx) in detail.returnItemList"
+          :key="idx"
+        >
+          <view class="goods-index">{{ idx + 1 }}</view>
+          <view class="goods-info">
+            <text class="goods-name">{{ item.goodsName || "-" }}</text>
+            <text class="goods-spec" v-if="item.goodsModel"
+              >规格：{{ item.goodsModel }}</text
+            >
+          </view>
+          <text class="goods-qty">x{{ item.quantity }}</text>
+        </view>
+      </view>
     </template>
 
     <!-- 空状态 -->

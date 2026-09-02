@@ -99,6 +99,46 @@
             <text v-if="formData.needReturnDevice" class="icon-check">✓</text>
           </view>
         </view>
+
+        <!-- 回收明细（需回寄设备时必填，回收设备可与发出设备不一致） -->
+        <view class="return-item-section" v-if="formData.needReturnDevice">
+          <view class="return-item-header">
+            <text class="return-item-label">回收明细</text>
+            <view class="btn-add" @click="addReturnItem">
+              <text class="icon-plus">+</text>添加
+            </view>
+          </view>
+          <view
+            class="return-item-row"
+            v-for="(item, index) in returnItemList"
+            :key="index"
+          >
+            <view class="return-item-picker">
+              <ApiSelectPicker
+                v-model="item.goodsId"
+                :api="getGoodsList"
+                label-key="goodsName"
+                value-key="id"
+                :labelFormat="goodsLabelFormat"
+                title="选择回收物品"
+                placeholder="选择物品"
+                :label="item.goodsName"
+                :z-index="999"
+              />
+            </view>
+            <input
+              v-model="item.quantity"
+              type="number"
+              class="return-qty-input"
+              placeholder="数量"
+            />
+            <image
+              @click="deleteReturnItem(index)"
+              class="return-item-delete"
+              src="/static/delivery/delete.png"
+            ></image>
+          </view>
+        </view>
       </view>
 
       <!-- 2.5 发货人员 -->
@@ -311,6 +351,17 @@ const goodsList = ref([
   },
 ]);
 
+// 回收明细（需回寄设备时必填）
+const returnItemList = ref([{ goodsId: "", quantity: "" }]);
+
+const addReturnItem = () => {
+  returnItemList.value.push({ goodsId: "", quantity: "" });
+};
+
+const deleteReturnItem = (index) => {
+  returnItemList.value.splice(index, 1);
+};
+
 // 从查询参数中读取 constructionTaskId 或 id（编辑模式）
 onLoad(async (options) => {
   query.value = options || {};
@@ -344,6 +395,16 @@ onLoad(async (options) => {
             quantity: i.quantity != null ? String(i.quantity) : "",
             unit: i.unit || "",
           }));
+        }
+        // 回收明细回显（整组替换语义，回传完整列表）
+        if (res.returnItemList?.length) {
+          returnItemList.value = res.returnItemList.map((i) => ({
+            goodsId: i.goodsId || "",
+            goodsName: i.goodsName || "",
+            quantity: i.quantity != null ? String(i.quantity) : "",
+          }));
+        } else {
+          returnItemList.value = [{ goodsId: "", quantity: "" }];
         }
       }
     } catch (error) {
@@ -488,6 +549,14 @@ const handleSubmit = async () => {
     return uni.showToast({ title: "请至少添加一项发货物品", icon: "none" });
   }
 
+  // 需回寄设备时回收明细必传
+  const validReturnItems = returnItemList.value.filter(
+    (i) => i.goodsId && Number(i.quantity) > 0,
+  );
+  if (formData.value.needReturnDevice && validReturnItems.length === 0) {
+    return uni.showToast({ title: "请填写回收明细", icon: "none" });
+  }
+
   const payload = {
     receiverName: formData.value.receiverName,
     receiverPhone: formData.value.receiverPhone,
@@ -508,6 +577,14 @@ const handleSubmit = async () => {
   }
   if (formData.value.deliveryPersonId) {
     payload.deliveryPersonId = formData.value.deliveryPersonId;
+  }
+
+  // 需回寄设备时携带回收明细（编辑为整组替换语义）
+  if (formData.value.needReturnDevice) {
+    payload.returnItemList = validReturnItems.map((i) => ({
+      goodsId: i.goodsId,
+      quantity: Number(i.quantity),
+    }));
   }
 
   // 发货人员提交物流信息
@@ -716,6 +793,66 @@ const handleSubmit = async () => {
         color: #ffffff;
         font-size: 22rpx;
         font-weight: bold;
+      }
+    }
+  }
+
+  /* 回收明细 */
+  .return-item-section {
+    margin-top: 30rpx;
+    border-top: 1rpx solid #eeeeee;
+    padding-top: 24rpx;
+
+    .return-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16rpx;
+
+      .return-item-label {
+        font-size: 28rpx;
+        color: #1a1a1a;
+        font-weight: 500;
+      }
+
+      .btn-add {
+        color: #0062ff;
+        font-size: 28rpx;
+        display: flex;
+        align-items: center;
+        font-weight: 500;
+        .icon-plus {
+          font-size: 32rpx;
+          margin-right: 4rpx;
+        }
+      }
+    }
+
+    .return-item-row {
+      display: flex;
+      align-items: center;
+      gap: 16rpx;
+      margin-bottom: 16rpx;
+
+      .return-item-picker {
+        flex: 1;
+      }
+
+      .return-qty-input {
+        width: 140rpx;
+        height: 64rpx;
+        background-color: #f7f8fa;
+        border-radius: 12rpx;
+        padding: 0 20rpx;
+        font-size: 28rpx;
+        color: #323233;
+        box-sizing: border-box;
+      }
+
+      .return-item-delete {
+        width: 32rpx;
+        height: 32rpx;
+        flex-shrink: 0;
       }
     }
   }
