@@ -17,7 +17,7 @@ export default {
     // #endif
     await initWework({
       corpId: "wxe7e2fa35ea164594",
-      jsApiList: ["geoLocation"],
+      jsApiList: ["geoLocation", "scanQRCode"],
     });
 
     const globalStore = useGlobalStore();

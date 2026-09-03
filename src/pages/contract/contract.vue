@@ -439,6 +439,7 @@ onLoad(async () => {
     border-radius: 12rpx;
     padding: 0 32rpx;
     height: 64rpx;
+    line-height: 62rpx;
   }
 }
 

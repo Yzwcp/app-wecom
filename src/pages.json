@@ -105,20 +105,6 @@
       }
     },
     {
-      "path": "pages/customer/extraInfo/infoForm",
-      "style": {
-        "navigationBarTitleText": "客户信息编辑",
-        "navigationStyle": "custom"
-      }
-    },
-    {
-      "path": "pages/customer/extraInfo/infoRecord",
-      "style": {
-        "navigationBarTitleText": "变更记录",
-        "navigationStyle": "custom"
-      }
-    },
-    {
       "path": "pages/visit/visit",
       "style": {
         "navigationBarTitleText": "回访",

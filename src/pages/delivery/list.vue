@@ -40,6 +40,9 @@
           {{ item.statusName || getStatusText(item.status) }}
         </view>
 
+        <!-- 创建时间 -->
+        <view class="create-time">创建时间：{{ item.createTime || "-" }}</view>
+
         <!-- 物流单号 -->
         <view class="task-no">物流单号：{{ item.logisticsNo || "-" }}</view>
 
@@ -115,7 +118,7 @@
           </button>
           <button
             v-if="
-              item.status === 'COMPLETED' &&
+              item.status === 'DELIVERED' &&
               item.needReturnDevice === '1' &&
               item.returnStatus === 'NOT_RETURNED'
             "
@@ -581,6 +584,12 @@ onShow(async () => {
   &.status-bg-rejected {
     background: #ef5350;
   }
+}
+
+.create-time {
+  font-size: 24rpx;
+  color: #aaaaaa;
+  margin-bottom: 12rpx;
 }
 
 .task-no {

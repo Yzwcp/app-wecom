@@ -166,20 +166,30 @@
           <text class="title-text">物流信息</text>
         </view>
 
-        <view class="form-row-grid">
-          <view class="form-item border-b border-r">
-            <input
-              v-model="formData.logisticsCompany"
-              placeholder="物流公司"
-              placeholder-class="placeholder-style"
-            />
-          </view>
-          <view class="form-item border-b">
+        <!-- 物流公司：字典选择 -->
+        <view class="logistics-item">
+          <view class="field-lbl">物流公司</view>
+          <DictSelectPicker
+            v-model="formData.logisticsCompany"
+            dict-key="WJ_LOGISTICS_COMPANY"
+            title="选择物流公司"
+            placeholder="请选择物流公司"
+          />
+        </view>
+
+        <!-- 物流单号 + 扫码 -->
+        <view class="logistics-item">
+          <view class="field-lbl">物流单号</view>
+          <view class="logistics-no-row">
             <input
               v-model="formData.logisticsNo"
-              placeholder="物流单号"
+              placeholder="请输入物流单号"
               placeholder-class="placeholder-style"
+              class="logistics-no-input"
             />
+            <view class="scan-btn" @click="handleScan">
+              <wd-icon name="scan" size="22px" color="#0062ff" />
+            </view>
           </view>
         </view>
       </view>
@@ -272,9 +282,10 @@
                 />
               </view>
               <view class="spec-box">
-                <view class="spec-label">单位</view>
+                <view class="spec-label">单价</view>
                 <input
-                  v-model="item.unit"
+                  v-model="item.unitPrice"
+                  type="digit"
                   class="spec-input"
                   placeholder="请输入"
                 />
@@ -310,6 +321,8 @@ import {
 import { getCustomerPage, getCustomerBaseInfo } from "@/api/customer";
 import ApiSelectPicker from "@/components/ApiSelectPicker.vue";
 import ApiSelectScrollPicker from "@/components/ApiSelectScrollPicker.vue";
+import DictSelectPicker from "@/components/DictSelectPicker.vue";
+import { scanQRCode } from "@/utils/wx";
 
 const globalStore = useGlobalStore();
 
@@ -347,7 +360,7 @@ const goodsList = ref([
     itemName: "",
     spec: "",
     quantity: "",
-    unit: "",
+    unitPrice: "",
   },
 ]);
 
@@ -393,7 +406,7 @@ onLoad(async (options) => {
             itemName: i.itemName || "",
             spec: i.spec || "",
             quantity: i.quantity != null ? String(i.quantity) : "",
-            unit: i.unit || "",
+            unitPrice: i.unitPrice != null ? String(i.unitPrice) : "",
           }));
         }
         // 回收明细回显（整组替换语义，回传完整列表）
@@ -508,7 +521,7 @@ const addItem = () => {
     itemName: "",
     spec: "",
     quantity: "",
-    unit: "",
+    unitPrice: "",
   });
   isCollapse.value = false;
 };
@@ -527,6 +540,19 @@ const deleteItem = (index) => {
 
 const editItem = (index) => {
   uni.showToast({ title: `编辑第 ${index + 1} 项`, icon: "none" });
+};
+
+// 扫码识别物流单号
+const handleScan = async () => {
+  try {
+    const result = await scanQRCode();
+    if (result) {
+      formData.value.logisticsNo = result;
+    }
+  } catch (error) {
+    console.error("扫码失败", error);
+    uni.showToast({ title: "扫码失败", icon: "none" });
+  }
 };
 
 // 取消
@@ -568,7 +594,8 @@ const handleSubmit = async () => {
       itemName: i.itemName,
       quantity: Number(i.quantity) || 0,
       spec: i.spec || "",
-      unit: i.unit || "",
+      unitPrice:
+        i.unitPrice != null && i.unitPrice !== "" ? Number(i.unitPrice) : 0,
     })),
   };
 
@@ -748,6 +775,44 @@ const handleSubmit = async () => {
     }
   }
 
+  /* 物流信息：上下排列 */
+  .logistics-item {
+    margin-bottom: 24rpx;
+    &:last-child {
+      margin-bottom: 0;
+    }
+    .field-lbl {
+      font-size: 28rpx;
+      color: #1a1a1a;
+      font-weight: 500;
+      margin-bottom: 16rpx;
+    }
+  }
+
+  .logistics-no-row {
+    display: flex;
+    align-items: center;
+    gap: 16rpx;
+    background-color: #f8f9fa;
+    border-radius: 12rpx;
+    padding: 0 24rpx;
+    min-height: 80rpx;
+
+    .logistics-no-input {
+      flex: 1;
+      font-size: 28rpx;
+      color: #323233;
+    }
+
+    .scan-btn {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12rpx;
+    }
+  }
+
   .remark-section {
     .remark-label {
       font-size: 28rpx;
@@ -840,7 +905,7 @@ const handleSubmit = async () => {
 
       .return-qty-input {
         width: 140rpx;
-        height: 64rpx;
+        height: 80rpx;
         background-color: #f7f8fa;
         border-radius: 12rpx;
         padding: 0 20rpx;
@@ -1011,7 +1076,7 @@ const handleSubmit = async () => {
   justify-content: space-between;
   gap: 30rpx;
   box-shadow: 0 -4rpx 16rpx rgba(0, 0, 0, 0.04);
-  z-index: 99;
+  z-index: 1;
 
   button {
     flex: 1;

@@ -128,7 +128,7 @@
             style="color: #2979ff; border-color: #2979ff"
             @click="goToExtraInfo(item)"
           >
-            客户信息
+            网维信息
           </button>
           <button
             class="btn btn-primary"
@@ -601,7 +601,7 @@ onLoad(async (options) => {
     margin: 0;
     padding: 0 36rpx;
     height: 64rpx;
-    line-height: 60rpx;
+    line-height: 64rpx;
     font-size: 26rpx;
     border-radius: 12rpx;
     box-sizing: border-box;

@@ -120,3 +120,33 @@ export function openLocation(options = {}) {
     });
   });
 }
+
+/**
+ * 调起企业微信扫码（识别二维码/条形码）
+ *
+ * @param {Object} [options]
+ * @param {string[]} [options.scanType=['qrCode','barCode']] - 扫码类型
+ * @returns {Promise<string>} 扫码结果内容
+ *
+ * @example
+ * import { scanQRCode } from "@/utils/wx";
+ *
+ * const text = await scanQRCode();
+ */
+export function scanQRCode(options = {}) {
+  return new Promise((resolve, reject) => {
+    ww.scanQRCode({
+      scanType: options.scanType || ["qrCode", "barCode"],
+      needResult: true,
+      success(res) {
+        console.log("扫码成功", res);
+        console.log("扫码结果", res.resultStr);
+
+        resolve(res?.resultStr || "");
+      },
+      fail(err) {
+        reject(err);
+      },
+    });
+  });
+}
