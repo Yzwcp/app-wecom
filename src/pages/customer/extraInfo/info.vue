@@ -4,10 +4,18 @@
       <!-- 按 6 类分组渲染全部字段，均为可选；分组可折叠，默认收起 -->
       <view v-for="type in INFO_TYPES" :key="type.value" class="info-card">
         <view class="card-header" @click="toggleGroup(type.value)">
-          <text class="card-title">{{ type.label }}</text>
+          <view class="card-header-left">
+            <image
+              v-if="type.icon"
+              :src="type.icon"
+              class="card-icon"
+              mode="aspectFit"
+            />
+            <text class="card-title">{{ type.label }}</text>
+          </view>
           <wd-icon
-            :name="expanded[type.value] ? 'arrow-up' : 'arrow-down'"
-            size="16px"
+            :name="expanded[type.value] ? 'down-circle' : 'right-circle'"
+            size="18px"
             color="#999"
           />
         </view>
@@ -175,6 +183,18 @@ async function handleSubmit() {
     align-items: center;
     justify-content: space-between;
     padding: 28rpx 0;
+  }
+
+  .card-header-left {
+    display: flex;
+    align-items: center;
+  }
+
+  .card-icon {
+    width: 44rpx;
+    height: 44rpx;
+    border-radius: 10rpx;
+    margin-right: 16rpx;
   }
 
   .card-title {

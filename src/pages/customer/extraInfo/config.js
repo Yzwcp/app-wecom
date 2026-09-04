@@ -3,6 +3,7 @@ export const INFO_TYPES = [
   {
     value: "NETWORK_DEVICE",
     label: "网络设备",
+    icon: "/static/construction/network-device.svg",
     fields: [
       { key: "publicIp.ip", label: "公网IP" },
       { key: "publicIp.netmask", label: "子网掩码" },
@@ -17,6 +18,7 @@ export const INFO_TYPES = [
   {
     value: "DISKLESS_SYSTEM",
     label: "无盘系统",
+    icon: "/static/construction/diskless-system.svg",
     fields: [
       { key: "serverIp", label: "服务器IP" },
       { key: "wwId.id", label: "万象账号" },
@@ -31,6 +33,7 @@ export const INFO_TYPES = [
   {
     value: "CHARGING_SYSTEM",
     label: "收费系统",
+    icon: "/static/construction/charging-system.svg",
     fields: [
       { key: "serverIp", label: "服务器IP" },
       { key: "consoleIp", label: "控制台IP" },
@@ -42,6 +45,7 @@ export const INFO_TYPES = [
   {
     value: "SUPERVISION_SYSTEM",
     label: "监管系统",
+    icon: "/static/construction/supervision-system.svg",
     fields: [
       { key: "policeServerIp", label: "公安服务器IP" },
       { key: "cultureServerIp", label: "文化服务器IP" },
@@ -51,6 +55,7 @@ export const INFO_TYPES = [
   {
     value: "CLIENT_MACHINE",
     label: "客户机",
+    icon: "/static/construction/client-machine.svg",
     fields: [
       { key: "ipRange", label: "IP段" },
       { key: "remark", label: "备注", type: "textarea" },
@@ -59,6 +64,7 @@ export const INFO_TYPES = [
   {
     value: "OTHER",
     label: "其他",
+    icon: "/static/construction/other.svg",
     fields: [
       { key: "monitorIpRange", label: "监控IP段" },
       { key: "wirelessIp", label: "无线IP" },

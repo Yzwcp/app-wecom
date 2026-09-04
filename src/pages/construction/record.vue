@@ -7,15 +7,22 @@
       <!-- 1. 定位详情模块（签到后折叠） -->
       <view class="card-module">
         <view class="card-header" @click="toggleSection('location')">
-          <text class="title">定位详情</text>
+          <view class="title-wrap">
+            <image
+              src="/static/construction/1.png"
+              class="title-icon"
+              mode="aspectFit"
+            />
+            <text class="title">定位详情</text>
+          </view>
           <view class="collapse-btn">
             <text class="status-text">{{
               isCollapse.location ? "展开" : "折叠"
             }}</text>
             <wd-icon
-              :name="isCollapse.location ? 'arrow-down' : 'arrow-up'"
-              size="16px"
-              color="#999"
+              :name="isCollapse.location ? 'right-circle' : 'down-circle'"
+              size="18px"
+              color="#065CF1"
             />
           </view>
         </view>
@@ -84,15 +91,22 @@
       <!-- 2. 施工详情模块 -->
       <view class="card-module">
         <view class="card-header" @click="toggleSection('construction')">
-          <text class="title">施工详情</text>
+          <view class="title-wrap">
+            <image
+              src="/static/construction/2.png"
+              class="title-icon"
+              mode="aspectFit"
+            />
+            <text class="title">施工详情</text>
+          </view>
           <view class="collapse-btn">
             <text class="status-text">{{
               isCollapse.construction ? "展开" : "折叠"
             }}</text>
             <wd-icon
-              :name="isCollapse.construction ? 'arrow-down' : 'arrow-up'"
-              size="16px"
-              color="#999"
+              :name="isCollapse.location ? 'right-circle' : 'down-circle'"
+              size="18px"
+              color="#065CF1"
             />
           </view>
         </view>
@@ -839,6 +853,17 @@ onLoad(() => {
     background-color: #fcfcfc;
     border-bottom: 1px solid #f2f3f5;
 
+    .title-wrap {
+      display: flex;
+      align-items: center;
+    }
+
+    .title-icon {
+      width: 36rpx;
+      height: 36rpx;
+      margin-right: 16rpx;
+    }
+
     .title {
       font-size: 30rpx;
       font-weight: bold;
@@ -852,7 +877,7 @@ onLoad(() => {
 
       .status-text {
         font-size: 26rpx;
-        color: #666;
+        color: #065cf1;
       }
     }
   }
