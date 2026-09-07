@@ -327,7 +327,7 @@
     <view v-if="pageMode !== 'view'" class="fixed-bottom-bar">
       <button class="btn-save" @click="handleSave('SAVE')">保存</button>
       <button class="btn-complete" @click="handleComplete('SUBMIT')">
-        提交
+        子任务完工
       </button>
     </view>
 
@@ -706,7 +706,7 @@ function handleComplete() {
   }
   uni.showModal({
     title: "提示",
-    content: "提交后不可编辑",
+    content: "提交后，表示子任务已完工",
     showCancel: true,
     confirmText: "确认提交",
     cancelText: "取消",

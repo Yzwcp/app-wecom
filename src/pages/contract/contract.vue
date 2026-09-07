@@ -83,43 +83,36 @@
 
         <!-- 底部操作按钮 -->
         <view class="card-actions">
-          <wd-button
+          <div
             v-if="item.status === 'DRAFT'"
-            size="small"
-            plain
-            type="info"
-            class="mgr-16"
+            class="btn btn-info mgr-16"
             @click.stop="goEdit(item)"
-            >编辑</wd-button
           >
-          <wd-button
-            type="warning"
-            plain
-            size="small"
-            class="mgr-16"
+            编辑
+          </div>
+          <div
+            class="btn btn-warning mgr-16"
             @click.stop="goSignRecord(item)"
             v-if="item.signWay === 'ESIGN'"
-            >签署记录</wd-button
           >
-          <wd-button
+            签署记录
+          </div>
+          <div
             v-if="item.status === 'DRAFT' && item.signWay === 'ESIGN'"
-            type="primary"
-            size="small"
-            class="mgr-16"
+            class="btn btn-primary mgr-16"
             @click.stop="openSignModal(item)"
-            >发起电签</wd-button
           >
-          <wd-button
+            发起电签
+          </div>
+          <div
             v-if="item.status === 'EFFECTIVE'"
-            type="success"
-            plain
-            size="small"
-            class="mgr-16"
+            class="btn btn-success mgr-16"
             @click.stop="goOrderList(item)"
-            >订单列表</wd-button
           >
-          <!-- <wd-button type="primary" size="small" 
-            >查看详情</wd-button
+            订单列表
+          </div>
+          <!-- <div class="btn btn-primary" 
+            >查看详情</div
           > -->
         </view>
       </view>
@@ -435,11 +428,45 @@ onLoad(async () => {
     margin-right: 16rpx;
   }
 
-  :deep(.wd-button) {
-    border-radius: 12rpx;
+  .btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     padding: 0 32rpx;
-    height: 64rpx;
-    line-height: 62rpx;
+    height: 32px;
+    line-height: 1;
+    font-size: 12px;
+    border-radius: 12rpx;
+    box-sizing: border-box;
+    font-weight: 500;
+
+    &:active {
+      opacity: 0.85;
+    }
+  }
+
+  .btn-primary {
+    background-color: #0066ff;
+    color: #ffffff;
+    border: 1rpx solid #0066ff;
+  }
+
+  .btn-info {
+    background-color: #ffffff;
+    color: #666;
+    border: 1rpx solid #ddd;
+  }
+
+  .btn-warning {
+    background-color: #ffffff;
+    color: #fa8c16;
+    border: 1rpx solid #fa8c16;
+  }
+
+  .btn-success {
+    background-color: #ffffff;
+    color: #2ecc71;
+    border: 1rpx solid #2ecc71;
   }
 }
 

@@ -453,7 +453,7 @@ async function loadCustomerInfo() {
   background-color: #ffffff;
   padding: 24rpx 32rpx;
   box-shadow: 0 -4rpx 16rpx rgba(0, 0, 0, 0.04);
-  z-index: 99;
+  z-index: 10;
   .submit-btn {
     :deep(.wd-button) {
       background-color: #0066ff !important;

@@ -38,12 +38,16 @@
           <text class="section-title">合同详情</text>
         </view>
 
-        <!-- 合同编号（只读，新增时预生成） -->
+        <!-- 合同编号（可编辑，新增时预生成） -->
         <view class="field-block">
           <view class="field-lbl">合同编号</view>
-          <view class="date-input-box readonly-box">
-            <text class="dt-txt">{{ form.contractNo || "-" }}</text>
-          </view>
+          <wd-input
+            v-model="form.contractNo"
+            placeholder="请输入合同编号"
+            no-border
+            :disabled="viewMode"
+            custom-class="form-input-bg"
+          />
         </view>
 
         <!-- 合同标题 -->
@@ -677,14 +681,6 @@ function submitForm(saveAction = "DRAFT") {
   align-items: center;
   .dt-txt {
     font-size: 28rpx;
-  }
-}
-
-/* 只读展示（合同编号） */
-.readonly-box {
-  .dt-txt {
-    color: #333;
-    font-weight: 500;
   }
 }
 

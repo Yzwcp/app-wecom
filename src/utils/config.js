@@ -13,7 +13,7 @@ export const weworkConfig = {
 };
 // vconsole 远程调试工具配置
 export const debugConfig = {
-  enabled: true, // 是否启用 vconsole，线上环境建议改为 false
+  enabled: import.meta.env.VITE_BASE_DEBUG === "true", // 是否启用 vconsole，线上环境建议改为 false
 };
 //首页组件数据展示组件 ITextList  ICard  IImage
 export const indexPageCompoent = "ICard";

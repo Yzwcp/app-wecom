@@ -43,8 +43,12 @@
         <!-- 创建时间 -->
         <view class="create-time">创建时间：{{ item.createTime || "-" }}</view>
 
-        <!-- 物流单号 -->
-        <view class="task-no">物流单号：{{ item.logisticsNo || "-" }}</view>
+        <!-- 物流单号（点击复制） -->
+        <view class="task-no" @click="copyLogisticsNo(item.logisticsNo)">
+          物流单号：<text style="text-decoration: underline; color: #2979ff">{{
+            item.logisticsNo || ""
+          }}</text>
+        </view>
 
         <!-- 客户信息 -->
         <view class="customer-info">
@@ -101,22 +105,22 @@
 
         <!-- 底部操作按钮 -->
         <view class="action-bar">
-          <button
+          <div
             v-if="item.status === 'PENDING_AUDIT'"
             class="btn btn-danger"
             @click="handleAction('audit', item)"
           >
             审核
-          </button>
-          <button
+          </div>
+          <div
             v-if="item.status === 'PENDING_DELIVERY'"
             class="btn btn-primary"
             @click="handleAction('deliver', item)"
             v-has="'WJ_DELIVERY_PERSON'"
           >
             确认发货
-          </button>
-          <button
+          </div>
+          <div
             v-if="
               item.status === 'DELIVERED' &&
               item.needReturnDevice === '1' &&
@@ -127,18 +131,16 @@
             v-has="'WJ_DELIVERY_PERSON'"
           >
             确认回寄
-          </button>
-          <button
+          </div>
+          <div
             v-if="item.status === 'DELIVERED'"
             class="btn btn-primary"
             @click="handleAction('receive', item)"
             v-has="'WJ_DELIVERY_PERSON'"
           >
             确认签收
-          </button>
-          <button class="btn btn-outline" @click="goToDetail(item)">
-            查看详情
-          </button>
+          </div>
+          <div class="btn btn-outline" @click="goToDetail(item)">查看详情</div>
         </view>
       </view>
 
@@ -233,19 +235,24 @@
         </view>
         <view class="popup-body">
           <view class="popup-label">物流公司</view>
-          <wd-input
+          <DictSelectPicker
             v-model="deliverForm.logisticsCompany"
-            placeholder="请输入物流公司"
-            no-border
-            custom-class="popup-input"
+            dict-key="WJ_LOGISTICS_COMPANY"
+            title="选择物流公司"
+            placeholder="请选择物流公司"
           />
           <view class="popup-label" style="margin-top: 24rpx">物流单号</view>
-          <wd-input
-            v-model="deliverForm.logisticsNo"
-            placeholder="请输入物流单号"
-            no-border
-            custom-class="popup-input"
-          />
+          <view class="popup-input-row">
+            <input
+              v-model="deliverForm.logisticsNo"
+              placeholder="请输入物流单号"
+              placeholder-class="placeholder-style"
+              class="popup-logistics-input"
+            />
+            <view class="scan-btn" @click="handleScanLogisticsNo">
+              <wd-icon name="scan" size="22px" color="#0062ff" />
+            </view>
+          </view>
         </view>
         <view class="popup-footer">
           <button class="btn-cancel" @click="closeDeliver">取消</button>
@@ -274,6 +281,8 @@ import {
   returnDeviceDelivery,
 } from "@/api/delivery";
 import { useDict } from "@/hooks/useDict";
+import DictSelectPicker from "@/components/DictSelectPicker.vue";
+import { scanQRCode } from "@/utils/wx";
 
 const { dictMap, getDictLabel } = useDict();
 
@@ -358,6 +367,23 @@ function handleRefresh() {
   fetchList(true);
 }
 
+// 点击复制物流单号
+function copyLogisticsNo(logisticsNo) {
+  if (!logisticsNo) {
+    uni.showToast({ title: "暂无物流单号", icon: "none" });
+    return;
+  }
+  uni.setClipboardData({
+    data: logisticsNo,
+    success: () => {
+      uni.showToast({ title: "已复制", icon: "success" });
+    },
+    fail: () => {
+      uni.showToast({ title: "复制失败", icon: "none" });
+    },
+  });
+}
+
 function handleTabChange({ name }) {
   activeTab.value = name;
   fetchList(true);
@@ -394,6 +420,19 @@ function closeDeliver() {
   deliverForm.value = { logisticsCompany: "", logisticsNo: "" };
 }
 
+// 扫码识别物流单号
+async function handleScanLogisticsNo() {
+  try {
+    const result = await scanQRCode();
+    if (result) {
+      deliverForm.value.logisticsNo = result;
+    }
+  } catch (error) {
+    console.error("扫码失败", error);
+    uni.showToast({ title: "扫码失败", icon: "none" });
+  }
+}
+
 async function confirmAudit() {
   if (
     auditForm.value.result === "REJECT" &&
@@ -424,7 +463,7 @@ async function confirmAudit() {
 
 async function confirmDeliver() {
   if (!deliverForm.value.logisticsCompany.trim()) {
-    uni.showToast({ title: "请输入物流公司", icon: "none" });
+    uni.showToast({ title: "请选择物流公司", icon: "none" });
     return;
   }
   if (!deliverForm.value.logisticsNo.trim()) {
@@ -596,6 +635,10 @@ onShow(async () => {
   font-size: 26rpx;
   color: #888888;
   margin-bottom: 28rpx;
+
+  &:active {
+    opacity: 0.6;
+  }
 }
 
 .customer-info {
@@ -710,11 +753,14 @@ onShow(async () => {
   padding-top: 28rpx;
 
   .btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     margin: 0;
     padding: 0 36rpx;
-    height: 64rpx;
-    line-height: 64rpx;
-    font-size: 26rpx;
+    height: 32px;
+    line-height: 1;
+    font-size: 12px;
     border-radius: 12rpx;
     box-sizing: border-box;
     font-weight: 500;
@@ -822,6 +868,34 @@ onShow(async () => {
       padding: 20rpx 24rpx;
       font-size: 28rpx;
     }
+
+    .popup-input-row {
+      display: flex;
+      align-items: center;
+      gap: 16rpx;
+      background-color: #f8f9fa;
+      border-radius: 12rpx;
+      padding: 0 24rpx;
+      min-height: 80rpx;
+
+      .popup-logistics-input {
+        flex: 1;
+        font-size: 28rpx;
+        color: #323233;
+      }
+
+      .scan-btn {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 12rpx;
+      }
+    }
+
+    .placeholder-style {
+      color: #969799;
+    }
   }
 
   .popup-footer {
@@ -830,22 +904,28 @@ onShow(async () => {
 
     .btn-cancel {
       flex: 1;
-      height: 80rpx;
-      line-height: 80rpx;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 40px;
+      line-height: 1;
       background-color: #f5f5f5;
       color: #666;
-      font-size: 30rpx;
+      font-size: 12px;
       border-radius: 40rpx;
       border: none;
     }
 
     .btn-submit {
       flex: 1;
-      height: 80rpx;
-      line-height: 80rpx;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 40px;
+      line-height: 1;
       background-color: #2979ff;
       color: #ffffff;
-      font-size: 30rpx;
+      font-size: 12px;
       border-radius: 40rpx;
       border: none;
 

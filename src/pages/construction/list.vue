@@ -45,6 +45,7 @@
       <view
         v-for="item in taskList"
         :key="item.id"
+        @click="goToDetail(item)"
         :class="['task-card', `status-border-${mapStatusClass(item.status)}`]"
       >
         <!-- 右上角状态切角标签 -->
@@ -91,52 +92,49 @@
 
         <!-- 底部操作按钮 -->
         <view class="action-bar">
-          <button
+          <div
             class="btn btn-outline"
             v-has="'WJ_CONSTRUCTION_MANAGER'"
-            @click="handleEdit(item)"
+            @click.stop="handleEdit(item)"
+            v-if="item.status === 'UNPUBLISHED'"
           >
             编辑
-          </button>
-          <button
+          </div>
+          <div
             class="btn btn-outline"
             v-has="'WJ_CONSTRUCTION_MANAGER'"
             v-if="item.status === 'UNPUBLISHED'"
-            @click="handleDelete(item)"
+            @click.stop="handleDelete(item)"
           >
             删除
-          </button>
-          <button
+          </div>
+          <div
             class="btn btn-primary"
             style="background-color: #07c160"
             v-has="'WJ_CONSTRUCTION_MANAGER'"
-            @click="handlePublish(item)"
+            @click.stop="handlePublish(item)"
             v-if="item.status === 'UNPUBLISHED'"
           >
             发布
-          </button>
-          <!-- <button
+          </div>
+          <!-- <div
             class="btn btn-primary"
             style="background-color: #ff7043"
             @click="goToDelivery(item)"
             v-if="item.status === 'COMPLETED'"
           >
             发货
-          </button> -->
-          <button
+          </div> -->
+          <div
             class="btn btn-outline"
             style="color: #2979ff; border-color: #2979ff"
-            @click="goToExtraInfo(item)"
+            @click.stop="goToExtraInfo(item)"
           >
             网维信息
-          </button>
-          <button
-            class="btn btn-primary"
-            v-if="item.status !== 'UNPUBLISHED'"
-            @click="goToDetail(item)"
-          >
+          </div>
+          <!-- <div class="btn btn-primary" >
             查看详情
-          </button>
+          </div> -->
         </view>
       </view>
 
@@ -598,11 +596,14 @@ onLoad(async (options) => {
   padding-top: 28rpx;
 
   .btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     margin: 0;
-    padding: 0 36rpx;
-    height: 64rpx;
-    line-height: 64rpx;
-    font-size: 26rpx;
+    padding: 0 12rpx;
+    height: 32px;
+    line-height: 1;
+    font-size: 12px;
     border-radius: 12rpx;
     box-sizing: border-box;
     font-weight: 500;

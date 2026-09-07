@@ -57,6 +57,19 @@
           </view>
           <wd-switch v-model="form.autoSyncService" :disabled="isDetail" />
         </view>
+
+        <!-- 实付金额 -->
+        <view class="field-block">
+          <view class="field-lbl">实付金额</view>
+          <wd-input
+            v-model="form.actualAmount"
+            type="digit"
+            placeholder="选填，不填按应付金额收款"
+            no-border
+            :readonly="isDetail"
+            custom-class="form-input-bg"
+          />
+        </view>
       </view>
 
       <!-- 产品明细 -->
@@ -211,6 +224,7 @@ const form = ref({
   orderName: "",
   orderType: "",
   autoSyncService: false,
+  actualAmount: "",
   remark: "",
   productList: [],
 });
@@ -273,6 +287,7 @@ async function loadOrderDetail(id) {
         order.autoSyncService === true ||
         order.autoSyncService === 1 ||
         order.autoSyncService === "1",
+      actualAmount: order.actualAmount ?? "",
       remark: order.remark || "",
       productList: productList.map((p) => ({
         id: p.id || "",
@@ -337,6 +352,10 @@ function submitForm() {
     orderName: form.value.orderName,
     orderType: form.value.orderType || undefined,
     autoSyncService: form.value.autoSyncService ? "1" : "2",
+    actualAmount:
+      form.value.actualAmount === ""
+        ? undefined
+        : Number(form.value.actualAmount),
     remark: form.value.remark || undefined,
     productList,
   };

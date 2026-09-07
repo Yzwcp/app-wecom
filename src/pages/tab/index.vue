@@ -295,12 +295,14 @@ onLoad(() => {
     margin-left: auto;
     border: 1rpx solid rgba(255, 255, 255, 0.7);
     border-radius: 999rpx;
-    height: 50rpx;
+    height: 30px;
     width: 150rpx;
-    line-height: 50rpx;
-    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
     .clear-text {
-      font-size: 24rpx;
+      font-size: 14px;
       color: #ffffff;
     }
   }

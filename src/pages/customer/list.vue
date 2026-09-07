@@ -66,29 +66,11 @@
         </view>
 
         <view class="card-actions">
-          <wd-button
-            type="primary"
-            size="small"
-            class="action-btn"
-            @click="goToEdit(item)"
-            >修改信息</wd-button
-          >
+          <div class="action-btn" @click="goToEdit(item)">修改信息</div>
           <!-- 创建外出计划 -->
-          <wd-button
-            type="primary"
-            size="small"
-            class="action-btn"
-            @click="goOutworkPlan(item)"
-            >外出计划</wd-button
-          >
+          <div class="action-btn" @click="goOutworkPlan(item)">外出计划</div>
           <!-- 创建合同 -->
-          <wd-button
-            type="primary"
-            size="small"
-            class="action-btn"
-            @click="goCreate(item)"
-            >创建合同</wd-button
-          >
+          <div class="action-btn" @click="goCreate(item)">创建合同</div>
         </view>
       </view>
 
@@ -353,10 +335,20 @@ onLoad(async () => {
   margin-top: 12rpx;
   gap: 12rpx;
   .action-btn {
-    :deep(.wd-button) {
-      background-color: #0066ff !important;
-      padding: 0 32rpx;
-      border-radius: 8rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #0066ff;
+    color: #ffffff;
+    padding: 0 32rpx;
+    border-radius: 8rpx;
+    height: 28px;
+    line-height: 1;
+    font-size: 12px;
+    box-sizing: border-box;
+
+    &:active {
+      opacity: 0.85;
     }
   }
 }

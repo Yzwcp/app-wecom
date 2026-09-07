@@ -187,6 +187,12 @@ async function handleSign() {
     isSigned.value = true;
     uni.hideLoading();
     uni.showToast({ title: "签到成功", icon: "success" });
+    // 签到成功后跳转到填写结果页
+    setTimeout(() => {
+      uni.redirectTo({
+        url: `/pages/outwork/result?outworkId=${outworkId.value}`,
+      });
+    }, 800);
   } catch (err) {
     uni.hideLoading();
     uni.showToast({ title: err.errMsg || "签到失败", icon: "none" });

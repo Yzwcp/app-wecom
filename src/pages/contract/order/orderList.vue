@@ -80,6 +80,16 @@
             }}</text>
           </view>
           <view class="grid-item">
+            <text class="label">实付金额</text>
+            <text class="value">{{
+              item.actualAmount !== null &&
+              item.actualAmount !== undefined &&
+              item.actualAmount !== ""
+                ? `¥${item.actualAmount}`
+                : "-"
+            }}</text>
+          </view>
+          <view class="grid-item">
             <text class="label">创建时间</text>
             <text class="value">{{ item.createTime || "-" }}</text>
           </view>
@@ -532,12 +542,14 @@ onLoad(async (op) => {
 
 .card-grid {
   display: flex;
+  flex-wrap: wrap;
   margin-bottom: 20rpx;
   .grid-item {
-    flex: 1;
+    flex: 0 0 50%;
     display: flex;
     flex-direction: column;
     gap: 8rpx;
+    margin-bottom: 16rpx;
   }
 }
 
