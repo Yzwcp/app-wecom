@@ -38,7 +38,13 @@
 
       <!-- 签收信息卡片 -->
       <view class="info-card">
-        <view class="card-title">签收信息</view>
+        <view class="card-title title-row">
+          <text>签收信息</text>
+          <view class="copy-btn" @click="handleCopyReceiverInfo">
+            <wd-icon name="copy" size="24rpx" color="#2979ff" />
+            <text>复制</text>
+          </view>
+        </view>
         <view class="info-row">
           <text class="label">收货人</text>
           <text class="value">{{ detail.receiverName || "-" }}</text>
@@ -215,6 +221,30 @@ function handleReturnDevice() {
   });
 }
 
+// 一键复制收货人信息
+function handleCopyReceiverInfo() {
+  const text = [
+    detail.value?.receiverName,
+    detail.value?.receiverPhone,
+    detail.value?.receiverAddress,
+  ]
+    .filter(Boolean)
+    .join("，");
+  if (!text) {
+    uni.showToast({ title: "暂无收货信息", icon: "none" });
+    return;
+  }
+  uni.setClipboardData({
+    data: text,
+    success: () => {
+      uni.showToast({ title: "已复制", icon: "success" });
+    },
+    fail: () => {
+      uni.showToast({ title: "复制失败", icon: "none" });
+    },
+  });
+}
+
 function goBack() {
   uni.navigateBack();
 }
@@ -306,6 +336,29 @@ function goBack() {
     padding-bottom: 24rpx;
     border-bottom: 1rpx solid #f0f3f7;
     margin-bottom: 24rpx;
+
+    &.title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .copy-btn {
+      display: flex;
+      align-items: center;
+      gap: 6rpx;
+      font-size: 24rpx;
+      font-weight: normal;
+      color: #2979ff;
+      padding: 6rpx 20rpx;
+      border: 1rpx solid rgba(41, 121, 255, 0.4);
+      border-radius: 999rpx;
+      background: #f0f5ff;
+
+      &:active {
+        background: #dbe7ff;
+      }
+    }
   }
 
   .info-row {

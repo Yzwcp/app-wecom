@@ -432,7 +432,7 @@ const mapMarkers = computed(() => {
 
 // 距离文字
 const distanceText = computed(() => {
-  if (checkInRange.distance <= 0) return "计算中...";
+  if (checkInRange.distance < 0) return "计算中...";
   if (checkInRange.distance < 1000) return `${checkInRange.distance}m`;
   return `${(checkInRange.distance / 1000).toFixed(1)}km`;
 });

@@ -287,9 +287,7 @@
                 v-model="formData.pubwinExpiredStartTime"
                 placeholder="选择日期"
                 no-border
-                suffix-icon="calendar"
-                readonly
-                @click="openDatePicker('pubwinExpiredStartTime')"
+                disabled
               />
             </view>
             <view class="field-item flex-1">
@@ -298,9 +296,7 @@
                 v-model="formData.pubwinExpireTime"
                 placeholder="选择日期"
                 no-border
-                suffix-icon="calendar"
-                readonly
-                @click="openDatePicker('pubwinExpireTime')"
+                disabled
               />
             </view>
           </view>
@@ -351,9 +347,7 @@
                 v-model="formData.maintenanceExpiredStartTime"
                 placeholder="选择日期"
                 no-border
-                suffix-icon="calendar"
-                readonly
-                @click="openDatePicker('maintenanceExpiredStartTime')"
+                disabled
               />
             </view>
             <view class="field-item flex-1">
@@ -362,9 +356,7 @@
                 v-model="formData.maintenanceExpireTime"
                 placeholder="选择日期"
                 no-border
-                suffix-icon="calendar"
-                readonly
-                @click="openDatePicker('maintenanceExpireTime')"
+                disabled
               />
             </view>
           </view>
@@ -407,9 +399,7 @@
                 v-model="formData.cloudExpiredStartTime"
                 placeholder="选择日期"
                 no-border
-                suffix-icon="calendar"
-                readonly
-                @click="openDatePicker('cloudExpiredStartTime')"
+                disabled
               />
             </view>
             <view class="field-item flex-1">
@@ -418,9 +408,7 @@
                 v-model="formData.cloudExpireTime"
                 placeholder="选择日期"
                 no-border
-                suffix-icon="calendar"
-                readonly
-                @click="openDatePicker('cloudExpireTime')"
+                disabled
               />
             </view>
           </view>
@@ -477,9 +465,7 @@
                 v-model="formData.cloudBroadbandExpiredStartTime"
                 placeholder="选择日期"
                 no-border
-                suffix-icon="calendar"
-                readonly
-                @click="openDatePicker('cloudBroadbandExpiredStartTime')"
+                disabled
               />
             </view>
             <view class="field-item flex-1">
@@ -488,9 +474,7 @@
                 v-model="formData.cloudBroadbandExpiredTime"
                 placeholder="选择日期"
                 no-border
-                suffix-icon="calendar"
-                readonly
-                @click="openDatePicker('cloudBroadbandExpiredTime')"
+                disabled
               />
             </view>
           </view>
@@ -539,16 +523,6 @@
         >保存</wd-button
       >
     </view>
-
-    <!-- 日期选择器 -->
-    <wd-datetime-picker
-      :visible="datePickerVisible"
-      v-model="datePickerModel"
-      type="datetime"
-      title="选择日期"
-      @confirm="onDatePickerConfirm"
-      @cancel="datePickerVisible = false"
-    />
 
     <!-- 省市区选择器 -->
     <wd-picker
@@ -656,30 +630,6 @@ const areaDisplay = computed(() => {
   const parts = [province, city, county].filter(Boolean);
   return parts.length ? parts.join(" / ") : "";
 });
-
-// ========== 日期选择器 ==========
-const datePickerVisible = ref(false);
-const datePickerModel = ref(Date.now());
-let currentDateField = "";
-
-function openDatePicker(field) {
-  currentDateField = field;
-  datePickerModel.value = formData[field]
-    ? new Date(formData[field]).getTime()
-    : Date.now();
-  console.log(datePickerModel);
-
-  datePickerVisible.value = true;
-}
-
-function onDatePickerConfirm({ value }) {
-  const d = new Date(value);
-  const padNum = (n) => String(n).padStart(2, "0");
-  // 格式化日期为yyyy-MM-dd HH:mm:ss
-  formData[currentDateField] =
-    `${d.getFullYear()}-${padNum(d.getMonth() + 1)}-${padNum(d.getDate())} ${padNum(d.getHours())}:${padNum(d.getMinutes())}:00`;
-  datePickerVisible.value = false;
-}
 
 // ========== 省市区选择器（cascade 三级联动） ==========
 const areaPickerVisible = ref(false);

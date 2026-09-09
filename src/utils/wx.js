@@ -1,5 +1,6 @@
 import * as ww from "@wecom/jssdk";
 import { getJsapiTicket } from "@/api";
+import { debugConfig } from "@/utils/config";
 
 /**
  * 初始化企业微信 JSSDK
@@ -54,8 +55,14 @@ export function initWework(options = {}) {
 /**
  * 获取地理位置
  *
+ * 企业微信内走 JSSDK 定位；非企业微信环境（如本地浏览器开发调试）
+ * 自动降级为浏览器 H5 定位（navigator.geolocation），不依赖微信。
+ * 注意：浏览器定位只能拿到 WGS84 坐标，请求 gcj02 时会原样返回。
+ *
  * @param {Object} [options]
  * @param {'wgs84' | 'gcj02'} [options.type='wgs84'] - 坐标类型，gcj02 为火星坐标（可直接用于地图显示）
+ * @param {boolean} [options.enableHighAccuracy=true] - 浏览器降级定位时是否使用高精度
+ * @param {number} [options.timeout=10000] - 浏览器降级定位超时时间（ms）
  * @returns {Promise<{ latitude: number, longitude: number, speed: number, accuracy: number }>}
  *
  * @example
@@ -65,6 +72,19 @@ export function initWework(options = {}) {
  * console.log(loc.latitude, loc.longitude);
  */
 export function getLocation(options = {}) {
+  console.log(debugConfig.enabled);
+
+  // 非企业微信环境（普通浏览器开发调试）降级使用浏览器定位
+  if (!ww.env?.isWeCom && debugConfig.enabled) {
+    return new Promise((resolve, reject) => {
+      resolve({
+        latitude: "30.310414",
+        longitude: "120.260147",
+      });
+    });
+    // return getBrowserLocation(options);
+  }
+
   return new Promise((resolve, reject) => {
     ww.getLocation({
       type: options.type || "wgs84",
@@ -80,6 +100,43 @@ export function getLocation(options = {}) {
         reject(err);
       },
     });
+  });
+}
+
+/**
+ * 浏览器 H5 定位（开发调试用降级方案），坐标系为 WGS84
+ *
+ * @private
+ * @param {Object} [options]
+ * @param {boolean} [options.enableHighAccuracy=true]
+ * @param {number} [options.timeout=10000]
+ */
+function getBrowserLocation(options = {}) {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error("当前浏览器不支持定位"));
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        resolve({
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+          speed: pos.coords.speed || 0,
+          accuracy: pos.coords.accuracy,
+          pos,
+        });
+      },
+      (err) => {
+        reject(new Error(`浏览器定位失败: ${err.message}`));
+      },
+      {
+        enableHighAccuracy: options.enableHighAccuracy !== false,
+        timeout: options.timeout || 10000,
+        maximumAge: 0,
+      },
+    );
   });
 }
 

@@ -32,6 +32,14 @@
           ></wd-tab>
         </wd-tabs>
       </view>
+
+      <!-- 服务时间调整入口 -->
+      <view class="time-adjust-entry">
+        <view class="entry-btn" @click="goTimeAdjustApply">申请调整时间</view>
+        <view class="entry-btn entry-btn--plain" @click="goTimeAdjustAudit"
+          >审核调整时间</view
+        >
+      </view>
     </view>
 
     <!-- 客户列表主体 -->
@@ -149,6 +157,16 @@ function goOutworkPlan(item) {
   });
 }
 
+// 跳转到申请调整时间页面
+function goTimeAdjustApply() {
+  uni.$router.push({ url: "/pages/customer/serviceTime/apply" });
+}
+
+// 跳转到审核调整时间分页页面
+function goTimeAdjustAudit() {
+  uni.$router.push({ url: "/pages/customer/serviceTime/audit" });
+}
+
 function getStatusClass(businessStatus) {
   const text = getStatusText(businessStatus);
   if (text === "正常营业") return "status-normal";
@@ -256,6 +274,34 @@ onLoad(async () => {
   background-color: #ffffff;
   min-height: 90rpx;
   border-bottom: 1px solid #f2f3f5;
+}
+.time-adjust-entry {
+  display: flex;
+  gap: 24rpx;
+  background-color: #ffffff;
+  padding: 20rpx 30rpx;
+  border-bottom: 1px solid #f2f3f5;
+
+  .entry-btn {
+    flex: 1;
+    height: 64rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10rpx;
+    font-size: 26rpx;
+    background-color: #0066ff;
+    color: #ffffff;
+
+    &--plain {
+      background-color: #eff4ff;
+      color: #0066ff;
+    }
+
+    &:active {
+      opacity: 0.85;
+    }
+  }
 }
 .content-container {
   padding: 0 30rpx;

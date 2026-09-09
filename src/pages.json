@@ -105,6 +105,20 @@
       }
     },
     {
+      "path": "pages/customer/serviceTime/apply",
+      "style": {
+        "navigationBarTitleText": "申请调整时间",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/customer/serviceTime/audit",
+      "style": {
+        "navigationBarTitleText": "审核调整时间",
+        "navigationStyle": "custom"
+      }
+    },
+    {
       "path": "pages/visit/visit",
       "style": {
         "navigationBarTitleText": "回访",
