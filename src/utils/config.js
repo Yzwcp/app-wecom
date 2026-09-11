@@ -19,5 +19,6 @@ export const debugConfig = {
 export const indexPageCompoent = "ICard";
 //阿里oss地址
 export const uploadBaseUrl = true ? baseUrl + "/pub/local/upload" : "-";
-// 应用版本号
-export const appVersion = "1.0.0";
+// 应用版本号（构建时由 vite define 注入，对应 package.json 的 version，打包自动递增）
+export const appVersion =
+  typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "dev";

@@ -1,6 +1,8 @@
 {
+  "version": "1.0.3",
   "scripts": {
     "dev:h5": "uni dev h5",
+    "prebuild:h5": "node scripts/bump-version.js",
     "build:h5": "uni build h5",
     "pub": "deploy prod"
   },
