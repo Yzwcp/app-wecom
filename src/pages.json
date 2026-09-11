@@ -42,6 +42,13 @@
       }
     },
     {
+      "path": "pages/construction/apply",
+      "style": {
+        "navigationBarTitleText": "申请施工任务",
+        "navigationStyle": "custom"
+      }
+    },
+    {
       "path": "pages/construction/material/material",
       "style": {
         "navigationBarTitleText": "材料列表",

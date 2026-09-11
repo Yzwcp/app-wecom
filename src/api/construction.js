@@ -77,6 +77,23 @@ export function deleteConstructionTask(data) {
   return post("/wjapp/wjMobile/constructionTask/delete", data);
 }
 
+// ==================== 施工人员申请施工任务 ====================
+
+// 申请施工任务
+export function applyConstructionTask(data) {
+  return post("/wjapp/wjMobile/constructionTask/apply", data);
+}
+
+// 审核申请（仅施工管理员，result: PASS-通过 REJECT-驳回）
+export function auditConstructionApply(data) {
+  return post("/wjapp/wjMobile/constructionTask/auditApply", data);
+}
+
+// 编辑申请（仅申请人本人，任务需为已驳回状态）
+export function editConstructionApply(data) {
+  return post("/wjapp/wjMobile/constructionTask/applyEdit", data);
+}
+
 // 货品列表（材料选择）
 export function getGoodsList(data) {
   return get("/wjapp/wjMobile/goods/list", data);

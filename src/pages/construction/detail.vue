@@ -75,6 +75,23 @@
               <text class="data-label">计划截止时间</text>
               <text class="data-value">{{ task.planFinishTime || "-" }}</text>
             </view>
+            <view class="data-row" v-if="task.applicantName">
+              <text class="data-label">申请人</text>
+              <text class="data-value">{{ task.applicantName }}</text>
+            </view>
+            <view class="data-row" v-if="task.auditorName">
+              <text class="data-label">负责人</text>
+              <text class="data-value">{{ task.auditorName }}</text>
+            </view>
+            <view
+              class="data-row"
+              v-if="task.status === 'REJECTED' && task.rejectReason"
+            >
+              <text class="data-label">驳回原因</text>
+              <text class="data-value" style="color: #ef5350">{{
+                task.rejectReason
+              }}</text>
+            </view>
           </view>
 
           <view class="divider-line"></view>
@@ -130,14 +147,18 @@
                 getSubTaskDesc(sub)
               }}</view>
               <view
-                v-if="sub.status === 'PENDING'"
+                v-if="sub.status === 'PENDING' && task.status === 'EXECUTING'"
                 class="execute-btn"
                 @click="goExecute(sub)"
               >
                 去执行
               </view>
               <view
-                v-if="sub.status === 'PENDING' && canTransfer(sub)"
+                v-if="
+                  sub.status === 'PENDING' &&
+                  task.status === 'EXECUTING' &&
+                  canTransfer(sub)
+                "
                 class="transfer-btn"
                 @click="openTransfer(sub)"
               >
@@ -161,7 +182,12 @@
         <!-- 无记录 -->
         <view v-if="visitList.length === 0" class="empty-record-box">
           <text class="empty-text">暂无记录</text>
-          <text class="link-btn" @click="handleAction('create')">去新建</text>
+          <text
+            v-if="task.status === 'EXECUTING'"
+            class="link-btn"
+            @click="handleAction('create')"
+            >去新建</text
+          >
         </view>
 
         <!-- 有记录 -->
@@ -202,6 +228,15 @@
       @click="handleSubmitConstruction"
     >
       <text class="submit-fab-text">提交完工</text>
+    </view>
+
+    <!-- 已驳回的申请：申请人可重新编辑提交 -->
+    <view
+      v-if="task.status === 'REJECTED' && canApplyEdit"
+      class="submit-fab"
+      @click="handleApplyEdit"
+    >
+      <text class="submit-fab-text">重新编辑申请</text>
     </view>
 
     <!-- 转派弹窗 -->
@@ -300,6 +335,9 @@ const requirementList = computed(() => {
 
 // ========== 任务状态 ==========
 function getTaskStatusText(status) {
+  // 优先新字典，未命中回退旧字典
+  const label = getDictLabel("WJ_TASK_STATUS", status);
+  if (label && label !== status) return label;
   return getDictLabel("WJ_TASK_STATUS", status) || status || "未知";
 }
 
@@ -354,6 +392,23 @@ const canSubmit = computed(() => {
   return !!uid && !!managerId && uid === managerId;
 });
 
+// 已驳回的申请，仅申请人本人可重新编辑提交（ID 类型可能不一致，统一转字符串比较）
+const canApplyEdit = computed(() => {
+  const uid = loginUser.value.id || loginUser.value.userId;
+  return (
+    !!uid &&
+    !!task.value.applicantId &&
+    String(uid) === String(task.value.applicantId)
+  );
+});
+
+// 跳转编辑申请页
+function handleApplyEdit() {
+  uni.$router.push({
+    url: `/pages/construction/apply?id=${task.value.id}`,
+  });
+}
+
 // 施工管理员可转派任意子任务；其他人仅自己执行的子任务可转派
 function canTransfer(sub) {
   if (isConstructionManager.value) return true;
@@ -382,7 +437,13 @@ const TASK_TYPE_MAP = {
 };
 
 function getTaskTypeText(type) {
-  return TASK_TYPE_MAP[type] || type || "-";
+  if (!type) return "-";
+  // 优先新字典，其次旧字典，最后回退本地映射
+  const newLabel = getDictLabel("CONSTRUCTION_TASK_TYPE", type);
+  if (newLabel && newLabel !== type) return newLabel;
+  const oldLabel = getDictLabel("WJ_TASK_TYPE", type);
+  if (oldLabel && oldLabel !== type) return oldLabel;
+  return TASK_TYPE_MAP[type] || type;
 }
 
 // ========== 操作 ==========
@@ -610,11 +671,26 @@ function handleCallPhone() {
     .title-area {
       display: flex;
       align-items: center;
+      flex: 1;
+      min-width: 0;
+
+      image {
+        flex-shrink: 0;
+      }
     }
     .shop-name {
       font-size: 34rpx;
       font-weight: bold;
       color: #ffffff;
+      flex: 1;
+      min-width: 0;
+      line-height: 1.3;
+      /* 长名称最多两行，超出省略号 */
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      word-break: break-all;
     }
     .status-badge {
       background-color: rgba(255, 255, 255, 0.25);
@@ -622,6 +698,9 @@ function handleCallPhone() {
       font-size: 24rpx;
       padding: 6rpx 20rpx;
       border-radius: 40rpx;
+      flex-shrink: 0;
+      white-space: nowrap;
+      margin-left: 16rpx;
     }
   }
 
@@ -783,16 +862,22 @@ function handleCallPhone() {
 .timeline-content {
   .step-header {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     font-size: 28rpx;
     font-weight: bold;
   }
   .step-status {
     margin-right: 24rpx;
     min-width: 110rpx;
+    flex-shrink: 0;
+    line-height: 1.4;
   }
   .step-name {
     color: #333333;
+    flex: 1;
+    min-width: 0;
+    line-height: 1.4;
+    word-break: break-all;
   }
   .step-desc {
     font-size: 24rpx;

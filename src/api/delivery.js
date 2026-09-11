@@ -25,6 +25,11 @@ export function auditDelivery(data) {
   return post("/wjapp/wjMobile/deliveryTask/audit", data);
 }
 
+// 撤销发货申请
+export function withdrawDelivery(data) {
+  return post("/wjapp/wjMobile/deliveryTask/withdraw", data);
+}
+
 // 确认发货
 export function deliverDelivery(data) {
   return post("/wjapp/wjMobile/deliveryTask/deliver", data);

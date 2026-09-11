@@ -61,7 +61,12 @@
 
         <!-- 收货信息 -->
         <view class="info-row">
-          <view class="field-label">收货地址</view>
+          <view class="field-label label-with-copy">
+            <text>收货地址</text>
+            <view class="copy-btn" @click="handleCopyReceiverInfo(item)">
+              <wd-icon name="copy" size="30rpx" color="#2979ff" />
+            </view>
+          </view>
           <view class="field-value address-value">{{
             item.receiverAddress || "暂无地址"
           }}</view>
@@ -141,6 +146,13 @@
             确认签收
           </div>
           <div class="btn btn-outline" @click="goToDetail(item)">查看详情</div>
+          <div
+            v-if="canWithdraw(item)"
+            class="btn btn-outline btn-withdraw"
+            @click="handleAction('withdraw', item)"
+          >
+            撤销申请
+          </div>
         </view>
       </view>
 
@@ -279,12 +291,15 @@ import {
   deliverDelivery,
   receiveDelivery,
   returnDeviceDelivery,
+  withdrawDelivery,
 } from "@/api/delivery";
 import { useDict } from "@/hooks/useDict";
+import { useGlobalStore } from "@/store/global";
 import DictSelectPicker from "@/components/DictSelectPicker.vue";
 import { scanQRCode } from "@/utils/wx";
 
 const { dictMap, getDictLabel } = useDict();
+const globalStore = useGlobalStore();
 
 const activeTab = ref("all");
 const topHeight = ref(0);
@@ -316,6 +331,22 @@ function getStatusClass(status) {
 
 function getStatusText(status) {
   return getDictLabel("WJ_DELIVERY_TASK_STATUS", status) || "未知";
+}
+
+// 是否发货部人员（管理员）
+const isDeliveryPerson = computed(() =>
+  (globalStore.userInfo?.roleCodeList || []).includes("WJ_DELIVERY_PERSON"),
+);
+
+// 撤销申请显隐：待审核/待发货，且当前用户是申请人或发货部人员
+function canWithdraw(item) {
+  if (!["PENDING_AUDIT", "PENDING_DELIVERY"].includes(item.status)) {
+    return false;
+  }
+  if (isDeliveryPerson.value) return true;
+  const uid = globalStore.userInfo?.id || globalStore.userInfo?.userId;
+  const applicantId = item.applicantId || item.createBy;
+  return !!uid && !!applicantId && uid === applicantId;
 }
 
 async function fetchList(isReset = false) {
@@ -375,6 +406,26 @@ function copyLogisticsNo(logisticsNo) {
   }
   uni.setClipboardData({
     data: logisticsNo,
+    success: () => {
+      uni.showToast({ title: "已复制", icon: "success" });
+    },
+    fail: () => {
+      uni.showToast({ title: "复制失败", icon: "none" });
+    },
+  });
+}
+
+// 一键复制收货人信息
+function handleCopyReceiverInfo(item) {
+  const text = [item?.receiverName, item?.receiverPhone, item?.receiverAddress]
+    .filter(Boolean)
+    .join("，");
+  if (!text) {
+    uni.showToast({ title: "暂无收货信息", icon: "none" });
+    return;
+  }
+  uni.setClipboardData({
+    data: text,
     success: () => {
       uni.showToast({ title: "已复制", icon: "success" });
     },
@@ -502,6 +553,24 @@ async function handleAction(actionType, item) {
     };
     showDeliver.value = true;
     return;
+  }
+  if (actionType === "withdraw") {
+    uni.showModal({
+      title: "撤销申请",
+      content: "确定撤销该发货申请吗？",
+      confirmText: "确定",
+      cancelText: "取消",
+      success: async (res) => {
+        if (!res.confirm) return;
+        try {
+          await withdrawDelivery({ id: item.id });
+          uni.showToast({ title: "撤销成功", icon: "success" });
+          fetchList(true);
+        } catch (error) {
+          console.error("撤销申请失败", error);
+        }
+      },
+    });
   }
   if (actionType === "receive") {
     uni.showModal({
@@ -692,7 +761,23 @@ onShow(async () => {
   font-size: 24rpx;
   color: #999999;
   margin-bottom: 10rpx;
+
+  &.label-with-copy {
+    display: flex;
+    align-items: center;
+    gap: 12rpx;
+
+    .copy-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      &:active {
+      }
+    }
+  }
 }
+
 .field-value {
   font-size: 28rpx;
   color: #333333;
@@ -777,6 +862,15 @@ onShow(async () => {
 
     &:active {
       background-color: #f5f5f5;
+    }
+  }
+
+  .btn-withdraw {
+    color: #ef5350;
+    border-color: #ef5350;
+
+    &:active {
+      background-color: #fff1f0;
     }
   }
 

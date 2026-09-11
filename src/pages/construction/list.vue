@@ -79,7 +79,7 @@
           <view class="info-cell">
             <view class="field-label">类型</view>
             <view class="field-value type-value">{{
-              getDictLabel("WJ_TASK_TYPE", item.taskType)
+              getTaskTypeText(item.taskType)
             }}</view>
           </view>
           <view class="info-cell">
@@ -90,8 +90,40 @@
           </view>
         </view>
 
+        <!-- 申请人 -->
+        <view class="info-row" v-if="item.applicantName">
+          <view class="field-label">申请人</view>
+          <view class="field-value">{{ item.applicantName }}</view>
+        </view>
+
+        <!-- 驳回原因 -->
+        <view
+          class="info-row"
+          v-if="item.status === 'REJECTED' && item.rejectReason"
+        >
+          <view class="field-label">驳回原因</view>
+          <view class="field-value reject-reason">{{ item.rejectReason }}</view>
+        </view>
+
         <!-- 底部操作按钮 -->
         <view class="action-bar">
+          <div
+            class="btn btn-primary"
+            style="background-color: #faad14"
+            v-has="'WJ_CONSTRUCTION_MANAGER'"
+            @click.stop="handleAudit(item)"
+            v-if="item.status === 'PENDING_AUDIT'"
+          >
+            审核
+          </div>
+          <div
+            class="btn btn-outline"
+            style="color: #2979ff; border-color: #2979ff"
+            @click.stop="handleApplyEdit(item)"
+            v-if="canApplyEdit(item)"
+          >
+            重新编辑
+          </div>
           <div
             class="btn btn-outline"
             v-has="'WJ_CONSTRUCTION_MANAGER'"
@@ -163,10 +195,73 @@
       <view class="safe-bottom"></view>
     </scroll-view>
 
-    <!-- 右下角新建按钮 -->
-    <view class="fab-add" v-has="'WJ_CONSTRUCTION_MANAGER'" @click="goToCreate">
-      <text class="fab-plus">+</text>
-    </view>
+    <!-- 右下角悬浮按钮：新建任务（管理员）/ 申请施工 -->
+    <wd-fab
+      type="primary"
+      position="right-bottom"
+      direction="top"
+      :gap="{ right: 20, bottom: 40 }"
+      :z-index="10"
+    >
+      <wd-button
+        v-has="'WJ_CONSTRUCTION_MANAGER'"
+        custom-class="fab-action"
+        type="primary"
+        round
+        @click="goToCreate"
+        >新建任务</wd-button
+      >
+      <wd-button
+        custom-class="fab-action"
+        type="success"
+        round
+        @click="goToApply"
+        >申请施工</wd-button
+      >
+    </wd-fab>
+
+    <!-- 审核申请弹窗 -->
+    <wd-popup
+      v-model="showAudit"
+      position="bottom"
+      :safe-area-inset-bottom="true"
+      custom-style="border-radius: 24rpx 24rpx 0 0;"
+      @close="closeAudit"
+    >
+      <view class="action-popup">
+        <view class="popup-header">
+          <text class="popup-title">审核施工任务申请</text>
+          <wd-icon name="close" size="20px" color="#999" @click="closeAudit" />
+        </view>
+        <view class="popup-body">
+          <view class="popup-label">审核结果</view>
+          <wd-radio-group v-model="auditForm.result" direction="horizontal">
+            <wd-radio value="PASS">通过</wd-radio>
+            <wd-radio value="REJECT">驳回</wd-radio>
+          </wd-radio-group>
+          <view class="popup-label" v-if="auditForm.result === 'REJECT'">
+            驳回原因
+          </view>
+          <textarea
+            v-if="auditForm.result === 'REJECT'"
+            v-model="auditForm.rejectReason"
+            placeholder="请输入驳回原因"
+            placeholder-class="placeholder-style"
+            class="popup-textarea"
+          />
+        </view>
+        <view class="popup-footer">
+          <button class="btn-cancel" @click="closeAudit">取消</button>
+          <button
+            class="btn-submit"
+            :disabled="actionSubmitting"
+            @click="confirmAudit"
+          >
+            {{ actionSubmitting ? "提交中..." : "确定" }}
+          </button>
+        </view>
+      </view>
+    </wd-popup>
   </view>
 </template>
 
@@ -178,6 +273,7 @@ import {
   getConstructionMyPage,
   publishConstructionTask,
   deleteConstructionTask,
+  auditConstructionApply,
 } from "@/api/construction";
 import { useGlobalStore } from "@/store/global";
 import { useDict } from "@/hooks/useDict";
@@ -208,6 +304,7 @@ const STATUS_VISUAL_MAP = {
   UNPUBLISHED: "unpublished",
   EXECUTING: "executing",
   PENDING_AUDIT: "audit",
+  REJECTED: "rejected",
   COMPLETED: "completed",
 };
 
@@ -217,6 +314,24 @@ function mapStatusClass(businessStatus) {
 
 function getStatusText(businessStatus) {
   return getDictLabel("WJ_TASK_STATUS", businessStatus) || "未知";
+}
+
+// 任务类型翻译：优先旧字典，未命中回退新字典
+function getTaskTypeText(taskType) {
+  const label = getDictLabel("WJ_TASK_TYPE", taskType);
+  return label !== taskType
+    ? label
+    : getDictLabel("CONSTRUCTION_TASK_TYPE", taskType);
+}
+
+// 当前登录人信息
+const loginUser = computed(() => globalStore.userInfo || {});
+
+// 编辑申请按钮显隐：已驳回且当前用户为申请人（ID 类型可能不一致，统一转字符串比较）
+function canApplyEdit(item) {
+  if (item.status !== "REJECTED") return false;
+  const uid = loginUser.value.id || loginUser.value.userId;
+  return !!uid && !!item.applicantId && String(uid) === String(item.applicantId);
 }
 
 // 获取列表数据
@@ -329,6 +444,63 @@ function goToDelivery(item) {
 // 跳转到创建施工任务
 function goToCreate() {
   uni.$router.push({ url: "/pages/construction/admin/adminForm" });
+}
+
+// 跳转到申请施工任务
+function goToApply() {
+  uni.$router.push({ url: "/pages/construction/apply" });
+}
+
+// 跳转到编辑申请（已驳回的申请重新提交）
+function handleApplyEdit(item) {
+  uni.$router.push({
+    url: `/pages/construction/apply?id=${item.id}`,
+  });
+}
+
+// ========== 审核申请 ==========
+const showAudit = ref(false);
+const actionSubmitting = ref(false);
+const currentItem = ref(null);
+const auditForm = ref({ result: "PASS", rejectReason: "" });
+
+function handleAudit(item) {
+  currentItem.value = item;
+  auditForm.value = { result: "PASS", rejectReason: "" };
+  showAudit.value = true;
+}
+
+function closeAudit() {
+  showAudit.value = false;
+  auditForm.value = { result: "PASS", rejectReason: "" };
+}
+
+async function confirmAudit() {
+  if (
+    auditForm.value.result === "REJECT" &&
+    !auditForm.value.rejectReason.trim()
+  ) {
+    uni.showToast({ title: "请输入驳回原因", icon: "none" });
+    return;
+  }
+  actionSubmitting.value = true;
+  try {
+    await auditConstructionApply({
+      id: currentItem.value.id,
+      result: auditForm.value.result,
+      rejectReason:
+        auditForm.value.result === "REJECT"
+          ? auditForm.value.rejectReason.trim()
+          : "",
+    });
+    uni.showToast({ title: "审核成功", icon: "success" });
+    closeAudit();
+    fetchList(true);
+  } catch (error) {
+    console.error("审核申请失败", error);
+  } finally {
+    actionSubmitting.value = false;
+  }
 }
 
 // 编辑施工任务
@@ -466,6 +638,9 @@ onLoad(async (options) => {
   &.status-border-audit {
     border-color: #fef0d0;
   }
+  &.status-border-rejected {
+    border-color: #ffccc7;
+  }
   &.status-border-completed {
     border-color: #d4f5ea;
   }
@@ -493,6 +668,9 @@ onLoad(async (options) => {
   }
   &.status-bg-audit {
     background: #faad14;
+  }
+  &.status-bg-rejected {
+    background: #ef5350;
   }
   &.status-bg-completed {
     background: #33c795;
@@ -533,6 +711,10 @@ onLoad(async (options) => {
     background-color: #faad14;
     box-shadow: 0 0 8rpx rgba(250, 173, 20, 0.5);
   }
+  .status-dot-rejected {
+    background-color: #ef5350;
+    box-shadow: 0 0 8rpx rgba(239, 83, 80, 0.5);
+  }
   .status-dot-completed {
     background-color: #33c795;
     box-shadow: 0 0 8rpx rgba(51, 199, 149, 0.5);
@@ -566,6 +748,14 @@ onLoad(async (options) => {
   margin-bottom: 24rpx;
   .address-value {
     font-weight: 500;
+  }
+  .reject-reason {
+    color: #ef5350;
+    background: #fff1f0;
+    padding: 12rpx 16rpx;
+    border-radius: 8rpx;
+    font-size: 26rpx;
+    line-height: 1.5;
   }
 }
 
@@ -661,30 +851,90 @@ onLoad(async (options) => {
   height: 140rpx;
 }
 
-/* 右下角新建按钮 */
-.fab-add {
-  position: fixed;
-  right: 40rpx;
-  bottom: 80rpx;
-  width: 96rpx;
-  height: 96rpx;
-  border-radius: 50%;
-  background-color: #2979ff;
-  box-shadow: 0 8rpx 24rpx rgba(41, 121, 255, 0.35);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 99;
+/* 右下角悬浮按钮动作项 */
+:deep(.fab-action) {
+  margin: 8rpx 0;
+  box-shadow: 0 8rpx 24rpx rgba(41, 121, 255, 0.25);
+}
 
-  &:active {
-    opacity: 0.85;
+/* 审核申请弹窗 */
+.action-popup {
+  padding: 32rpx;
+  background-color: #ffffff;
+
+  .popup-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 32rpx;
+
+    .popup-title {
+      font-size: 32rpx;
+      font-weight: 600;
+      color: #333;
+    }
   }
 
-  .fab-plus {
-    color: #ffffff;
-    font-size: 56rpx;
-    line-height: 1;
-    margin-top: -6rpx;
+  .popup-body {
+    margin-bottom: 32rpx;
+
+    .popup-label {
+      font-size: 28rpx;
+      color: #666;
+      margin-bottom: 16rpx;
+    }
+
+    .popup-textarea {
+      width: 100%;
+      min-height: 160rpx;
+      background-color: #f8f9fa;
+      border-radius: 12rpx;
+      padding: 20rpx 24rpx;
+      font-size: 28rpx;
+      box-sizing: border-box;
+      margin-top: 8rpx;
+    }
+
+    .placeholder-style {
+      color: #969799;
+    }
+  }
+
+  .popup-footer {
+    display: flex;
+    gap: 24rpx;
+
+    .btn-cancel {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 40px;
+      line-height: 1;
+      background-color: #f5f5f5;
+      color: #666;
+      font-size: 12px;
+      border-radius: 40rpx;
+      border: none;
+    }
+
+    .btn-submit {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 40px;
+      line-height: 1;
+      background-color: #2979ff;
+      color: #ffffff;
+      font-size: 12px;
+      border-radius: 40rpx;
+      border: none;
+
+      &:disabled {
+        opacity: 0.6;
+      }
+    }
   }
 }
 </style>
