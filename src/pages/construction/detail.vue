@@ -439,7 +439,7 @@ const TASK_TYPE_MAP = {
 function getTaskTypeText(type) {
   if (!type) return "-";
   // 优先新字典，其次旧字典，最后回退本地映射
-  const newLabel = getDictLabel("CONSTRUCTION_TASK_TYPE", type);
+  const newLabel = getDictLabel("WJ_TASK_TYPE", type);
   if (newLabel && newLabel !== type) return newLabel;
   const oldLabel = getDictLabel("WJ_TASK_TYPE", type);
   if (oldLabel && oldLabel !== type) return oldLabel;

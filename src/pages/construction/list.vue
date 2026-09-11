@@ -319,9 +319,7 @@ function getStatusText(businessStatus) {
 // 任务类型翻译：优先旧字典，未命中回退新字典
 function getTaskTypeText(taskType) {
   const label = getDictLabel("WJ_TASK_TYPE", taskType);
-  return label !== taskType
-    ? label
-    : getDictLabel("CONSTRUCTION_TASK_TYPE", taskType);
+  return label !== taskType ? label : getDictLabel("WJ_TASK_TYPE", taskType);
 }
 
 // 当前登录人信息
@@ -331,7 +329,9 @@ const loginUser = computed(() => globalStore.userInfo || {});
 function canApplyEdit(item) {
   if (item.status !== "REJECTED") return false;
   const uid = loginUser.value.id || loginUser.value.userId;
-  return !!uid && !!item.applicantId && String(uid) === String(item.applicantId);
+  return (
+    !!uid && !!item.applicantId && String(uid) === String(item.applicantId)
+  );
 }
 
 // 获取列表数据
