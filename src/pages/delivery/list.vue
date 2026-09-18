@@ -278,6 +278,56 @@
         </view>
       </view>
     </wd-popup>
+
+    <!-- 回寄确认弹窗（滑动验证通过后才能确认） -->
+    <wd-popup
+      v-model="showReturnConfirm"
+      position="center"
+      custom-style="width: 600rpx; border-radius: 24rpx;"
+      @close="closeReturnConfirm"
+      @after-enter="handleReturnPopupShown"
+    >
+      <view class="action-popup return-confirm-popup">
+        <view class="popup-header">
+          <text class="popup-title">回寄确认</text>
+          <wd-icon
+            name="close"
+            size="20px"
+            color="#999"
+            @click="closeReturnConfirm"
+          />
+        </view>
+        <view class="popup-body">
+          <view class="return-confirm-tip">
+            确定回寄该发货单吗？请确认设备已寄回。
+          </view>
+          <wd-slide-verify
+            ref="slideVerifyRef"
+            text="按住滑块，拖动到最右侧"
+            success-text="验证通过"
+            @success="handleSlideSuccess"
+            @fail="handleSlideFail"
+          />
+        </view>
+        <view class="popup-footer">
+          <button class="btn-cancel" @click="closeReturnConfirm">取消</button>
+          <button
+            class="btn-submit"
+            :class="{ 'btn-gray': !canConfirmReturn }"
+            :disabled="!canConfirmReturn"
+            @click="confirmReturnDevice"
+          >
+            {{
+              !slideVerified
+                ? "请滑动验证"
+                : actionSubmitting
+                  ? "提交中..."
+                  : "确定"
+            }}
+          </button>
+        </view>
+      </view>
+    </wd-popup>
   </view>
 </template>
 
@@ -538,6 +588,56 @@ async function confirmDeliver() {
   }
 }
 
+// 回寄确认弹窗（滑动验证通过后才能确认）
+const showReturnConfirm = ref(false);
+const slideVerified = ref(false);
+const slideVerifyRef = ref(null);
+
+// 是否允许确认：滑动验证通过 + 非提交中
+const canConfirmReturn = computed(
+  () => slideVerified.value && !actionSubmitting.value,
+);
+
+function openReturnConfirm(item) {
+  currentItem.value = item;
+  showReturnConfirm.value = true;
+  slideVerified.value = false;
+}
+
+// 弹窗动画结束后重新测量滑块尺寸（wd-popup 懒渲染，隐藏时测量宽度可能为 0）
+function handleReturnPopupShown() {
+  slideVerifyRef.value?.init?.();
+}
+
+function handleSlideSuccess() {
+  slideVerified.value = true;
+}
+
+function handleSlideFail() {
+  slideVerified.value = false;
+}
+
+function closeReturnConfirm() {
+  showReturnConfirm.value = false;
+  slideVerified.value = false;
+  slideVerifyRef.value?.reset?.();
+}
+
+async function confirmReturnDevice() {
+  if (!canConfirmReturn.value || !currentItem.value) return;
+  actionSubmitting.value = true;
+  try {
+    await returnDeviceDelivery({ id: currentItem.value.id });
+    uni.showToast({ title: "操作成功", icon: "success" });
+    closeReturnConfirm();
+    fetchList(true);
+  } catch (error) {
+    console.error("回寄失败", error);
+  } finally {
+    actionSubmitting.value = false;
+  }
+}
+
 async function handleAction(actionType, item) {
   if (actionType === "audit") {
     currentItem.value = item;
@@ -591,22 +691,7 @@ async function handleAction(actionType, item) {
     });
   }
   if (actionType === "returnDevice") {
-    uni.showModal({
-      title: "回寄确认",
-      content: "确定回寄该发货单吗？",
-      confirmText: "确定",
-      cancelText: "取消",
-      success: async (res) => {
-        if (!res.confirm) return;
-        try {
-          await returnDeviceDelivery({ id: item.id });
-          uni.showToast({ title: "操作成功", icon: "success" });
-          fetchList(true);
-        } catch (error) {
-          console.error("回寄失败", error);
-        }
-      },
-    });
+    openReturnConfirm(item);
   }
 }
 
@@ -1026,6 +1111,32 @@ onShow(async () => {
       &:disabled {
         opacity: 0.6;
       }
+    }
+  }
+}
+
+/* 回寄确认（滑动验证）居中弹窗 */
+.return-confirm-popup {
+  border-radius: 24rpx;
+
+  .return-confirm-tip {
+    font-size: 28rpx;
+    color: #666;
+    line-height: 1.6;
+    text-align: center;
+    padding: 24rpx 0 8rpx;
+  }
+
+  /* 滑动验证组件与提示文案的间距 */
+  :deep(.wd-slide-verify) {
+    margin-top: 24rpx;
+  }
+
+  /* 未通过滑动验证时确认按钮置灰，通过后恢复高亮 */
+  .popup-footer {
+    .btn-submit.btn-gray {
+      background-color: #c8c9cc;
+      opacity: 1;
     }
   }
 }

@@ -34,7 +34,7 @@
           <text class="title-text">签收信息</text>
         </view>
         <view class="customer-select-row">
-          <view class="field-lbl">客户（门店）</view>
+          <view class="field-lbl required">客户（门店）</view>
           <ApiSelectScrollPicker
             v-model="formData.customerId"
             :api="getCustomerPage"
@@ -69,10 +69,12 @@
         </view>
 
         <view class="form-item border-b address-item">
-          <input
+          <textarea
             v-model="formData.receiverAddress"
             placeholder="详细地址"
             placeholder-class="placeholder-style"
+            class="address-textarea"
+            auto-height
           />
         </view>
 
@@ -300,7 +302,7 @@
     <view class="footer-actions">
       <button class="btn-cancel" @click="handleCancel">取消</button>
       <button class="btn-submit" :disabled="submitting" @click="handleSubmit">
-        {{ submitting ? "提交中..." : isEdit ? "提交修改" : "申请提交" }}
+        {{ submitting ? "提交中..." : isEdit ? "提交修改" : "提交申请" }}
       </button>
     </view>
   </view>
@@ -563,6 +565,9 @@ const handleCancel = () => {
 // 提交
 const handleSubmit = async () => {
   // 校验
+  if (!formData.value.customerId) {
+    return uni.showToast({ title: "请选择客户（门店）", icon: "none" });
+  }
   if (
     !formData.value.receiverName ||
     !formData.value.receiverPhone ||
@@ -584,6 +589,7 @@ const handleSubmit = async () => {
   }
 
   const payload = {
+    customerId: formData.value.customerId,
     receiverName: formData.value.receiverName,
     receiverPhone: formData.value.receiverPhone,
     receiverAddress: formData.value.receiverAddress,
@@ -599,9 +605,6 @@ const handleSubmit = async () => {
     })),
   };
 
-  if (formData.value.customerId) {
-    payload.customerId = formData.value.customerId;
-  }
   if (formData.value.deliveryPersonId) {
     payload.deliveryPersonId = formData.value.deliveryPersonId;
   }
@@ -763,6 +766,15 @@ const handleSubmit = async () => {
 
   .address-item {
     margin-bottom: 30rpx;
+
+    .address-textarea {
+      width: 100%;
+      min-height: 48rpx;
+      font-size: 30rpx;
+      color: #323233;
+      line-height: 1.5;
+      box-sizing: border-box;
+    }
   }
 
   .customer-select-row {
@@ -772,6 +784,11 @@ const handleSubmit = async () => {
       color: #1a1a1a;
       font-weight: 500;
       margin-bottom: 16rpx;
+      &.required::before {
+        content: "*";
+        color: #ee0a24;
+        margin-right: 4rpx;
+      }
     }
   }
 
