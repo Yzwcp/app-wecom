@@ -98,6 +98,28 @@
             >
           </view>
 
+          <!-- 物品选择器：新增明细必选，选中后带出名称/型号 -->
+          <view v-if="!isDetail" class="field-block">
+            <view class="field-lbl">
+              物品
+              <text v-if="!prod.id" class="red">*</text>
+            </view>
+            <view class="goods-picker-wrap">
+              <ApiSelectPicker
+                v-model="prod.goodsId"
+                :api="getGoodsList"
+                label-key="goodsName"
+                value-key="id"
+                :label-format="goodsLabelFormat"
+                :label="prod.goodsId ? prod.productName : ''"
+                title="选择物品"
+                placeholder="请选择物品"
+                :z-index="999"
+                @confirm="(row) => onGoodsConfirm(prod, row)"
+              />
+            </view>
+          </view>
+
           <view class="field-block">
             <view class="field-lbl">
               产品名称
@@ -105,9 +127,9 @@
             </view>
             <wd-input
               v-model="prod.productName"
-              placeholder="请输入产品名称"
+              :placeholder="prod.goodsId ? '以物品档案为准' : '请输入产品名称'"
               no-border
-              :readonly="isDetail"
+              :readonly="isDetail || !!prod.goodsId"
               custom-class="form-input-bg product-input-bg"
             />
           </view>
@@ -116,9 +138,9 @@
             <view class="field-lbl">产品型号</view>
             <wd-input
               v-model="prod.productModel"
-              placeholder="请输入产品型号"
+              :placeholder="prod.goodsId ? '以物品档案为准' : '请输入产品型号'"
               no-border
-              :readonly="isDetail"
+              :readonly="isDetail || !!prod.goodsId"
               custom-class="form-input-bg product-input-bg"
             />
           </view>
@@ -188,6 +210,58 @@
           />
         </view>
       </view>
+
+      <!-- 支付信息（仅详情模式展示） -->
+      <view v-if="isDetail && hasPayInfo" class="section-card">
+        <view class="section-header">
+          <wd-icon name="payment" size="18px" color="#0066ff" />
+          <text class="section-title">支付信息</text>
+        </view>
+
+        <view class="field-block">
+          <view class="field-lbl">支付渠道</view>
+          <view class="readonly-box">
+            <text class="readonly-text">{{ payChannelText }}</text>
+          </view>
+        </view>
+
+        <view class="field-block">
+          <view class="field-lbl">订单金额</view>
+          <view class="readonly-box">
+            <text class="readonly-text">¥{{ payTotalAmount }}</text>
+          </view>
+        </view>
+
+        <view class="field-block">
+          <view class="field-lbl">实付金额</view>
+          <view class="readonly-box">
+            <text class="readonly-text amount-highlight"
+              >¥{{ payActualAmount }}</text
+            >
+          </view>
+        </view>
+
+        <view class="field-block" v-if="payTime">
+          <view class="field-lbl">支付时间</view>
+          <view class="readonly-box">
+            <text class="readonly-text">{{ payTime }}</text>
+          </view>
+        </view>
+
+        <view class="field-block" v-if="payFileUrlList.length">
+          <view class="field-lbl">支付截图</view>
+          <view class="pay-img-row">
+            <image
+              v-for="(url, idx) in payFileUrlList"
+              :key="idx"
+              :src="url"
+              class="pay-img"
+              mode="aspectFill"
+              @click="previewPayImg(idx)"
+            />
+          </view>
+        </view>
+      </view>
     </view>
 
     <!-- 底部固定的提交按钮 -->
@@ -210,8 +284,10 @@ import {
   addContractOrder,
   editContractOrder,
   getContractOrderDetail,
-} from "@/api";
+  getGoodsList,
+} from "@/api/contractOrder";
 import DictSelectPicker from "@/components/DictSelectPicker.vue";
+import ApiSelectPicker from "@/components/ApiSelectPicker.vue";
 
 const navTitle = ref("新增订单");
 const orderId = ref("");
@@ -231,6 +307,32 @@ const form = ref({
 
 const submitLoading = ref(false);
 
+// ========== 支付信息（详情模式回显） ==========
+const thirdPayment = ref("");
+const payFileUrlList = ref([]);
+const payStatus = ref("");
+const payTime = ref("");
+const payTotalAmount = ref("-");
+const payActualAmount = ref("-");
+
+const payChannelText = computed(() => {
+  if (thirdPayment.value === "BQBA_PAY") return "线上播钱吧";
+  if (thirdPayment.value === "MANUAL") return "线下人工确认";
+  return thirdPayment.value || "-";
+});
+
+const hasPayInfo = computed(
+  () =>
+    payStatus.value === "2" ||
+    !!thirdPayment.value ||
+    payFileUrlList.value.length > 0,
+);
+
+// 预览支付截图
+function previewPayImg(idx) {
+  uni.previewImage({ urls: payFileUrlList.value, current: idx });
+}
+
 // 产品明细合计总价
 const totalPriceText = computed(() => {
   const total = form.value.productList.reduce((sum, p) => {
@@ -244,12 +346,33 @@ const totalPriceText = computed(() => {
 function newProduct() {
   return {
     id: "",
+    goodsId: "",
     productName: "",
     productModel: "",
     quantity: "",
     unitPrice: "",
     sort: "",
   };
+}
+
+// 物品选项文案：名称 | 型号
+function goodsLabelFormat(item) {
+  const parts = [item.goodsName || "-"];
+  if (item.goodsModel) parts.push(item.goodsModel);
+  return parts.join(" | ");
+}
+
+// 选中物品后回填名称/型号（以物品档案为准）
+function onGoodsConfirm(prod, row) {
+  if (row) {
+    prod.goodsId = row.id;
+    prod.productName = row.goodsName || "";
+    prod.productModel = row.goodsModel || "";
+  } else {
+    prod.goodsId = "";
+    prod.productName = "";
+    prod.productModel = "";
+  }
 }
 
 function addProduct() {
@@ -291,6 +414,7 @@ async function loadOrderDetail(id) {
       remark: order.remark || "",
       productList: productList.map((p) => ({
         id: p.id || "",
+        goodsId: p.goodsId || "",
         productName: p.productName || "",
         productModel: p.productModel || "",
         quantity: p.quantity ?? "",
@@ -301,6 +425,13 @@ async function loadOrderDetail(id) {
     if (!customerId.value) {
       customerId.value = order.customerId || "";
     }
+    // 支付信息回显：渠道 + 金额 + 支付时间 + 线下支付截图
+    thirdPayment.value = order.thirdPayment || "";
+    payStatus.value = order.payStatus || "";
+    payTime.value = order.payTime || "";
+    payTotalAmount.value = order.totalAmount ?? "-";
+    payActualAmount.value = order.actualAmount ?? "-";
+    payFileUrlList.value = data.payFileUrlList || order.payFileUrlList || [];
   } catch (e) {
     uni.showToast({ title: "订单详情加载失败", icon: "none" });
   }
@@ -321,6 +452,11 @@ function submitForm() {
   }
   for (let i = 0; i < form.value.productList.length; i++) {
     const p = form.value.productList[i];
+    // 存量行（有 id）允许不带物品回显保存，新增行必须选择物品
+    if (!p.id && !p.goodsId) {
+      uni.showToast({ title: `第${i + 1}条请选择物品`, icon: "none" });
+      return;
+    }
     if (!p.productName) {
       uni.showToast({ title: `第${i + 1}条产品名称不能为空`, icon: "none" });
       return;
@@ -341,6 +477,7 @@ function submitForm() {
 
   const productList = form.value.productList.map((p) => ({
     ...p,
+    goodsId: p.goodsId || undefined,
     quantity: Number(p.quantity),
     unitPrice: Number(p.unitPrice),
     sort: p.sort === "" ? undefined : Number(p.sort),
@@ -397,6 +534,25 @@ function submitForm() {
 .red {
   color: #ef4444;
   margin-left: 6rpx;
+}
+
+/* 支付截图 */
+.pay-img-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+
+  .pay-img {
+    width: 160rpx;
+    height: 160rpx;
+    border-radius: 12rpx;
+    background-color: #f7f8fa;
+  }
+}
+
+.amount-highlight {
+  color: #0066ff;
+  font-weight: 600;
 }
 .flex-1 {
   flex: 1;
@@ -511,6 +667,16 @@ function submitForm() {
   .two-col {
     display: flex;
     gap: 20rpx;
+  }
+}
+
+/* 物品选择器：与产品输入框保持一致的白底描边样式 */
+.goods-picker-wrap {
+  :deep(.api-select__inner) {
+    background-color: #ffffff;
+    border: 2rpx solid #dfe2e8;
+    padding: 20rpx 24rpx;
+    min-height: auto;
   }
 }
 

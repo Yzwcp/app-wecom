@@ -1,5 +1,5 @@
 {
-  "version": "1.0.14",
+  "version": "1.0.18",
   "scripts": {
     "dev:h5": "uni dev h5",
     "prebuild:h5": "node scripts/bump-version.js",

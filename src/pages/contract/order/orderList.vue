@@ -104,7 +104,7 @@
             class="mgr-16"
             v-if="item.payStatus !== '2'"
             @click.stop="openPay(item)"
-            >支付码</wd-button
+            >确认支付</wd-button
           >
           <wd-button
             type="success"
@@ -171,6 +171,75 @@
       > -->
     </view>
 
+    <!-- 确认支付弹窗 -->
+    <wd-popup
+      v-model="payConfirmShow"
+      position="bottom"
+      :safe-area-inset-bottom="true"
+      custom-style="border-radius: 24rpx 24rpx 0 0;"
+      @close="closePayConfirm"
+    >
+      <view class="pay-confirm-popup">
+        <view class="popup-header">
+          <text class="popup-title">确认支付</text>
+          <wd-icon
+            name="close"
+            size="20px"
+            color="#999"
+            @click="closePayConfirm"
+          />
+        </view>
+        <view class="popup-body">
+          <view class="popup-label">实付金额</view>
+          <input
+            v-model="payForm.actualAmount"
+            type="digit"
+            placeholder="不填按订单金额"
+            placeholder-class="placeholder-style"
+            class="popup-input"
+          />
+
+          <view class="popup-label">支付方式</view>
+          <wd-radio-group v-model="payForm.payType" direction="horizontal">
+            <wd-radio value="ONLINE">线上支付</wd-radio>
+            <wd-radio value="OFFLINE">线下支付</wd-radio>
+          </wd-radio-group>
+
+          <view class="popup-label">备注</view>
+          <input
+            v-model="payForm.remark"
+            placeholder="请输入支付备注（选填）"
+            placeholder-class="placeholder-style"
+            class="popup-input"
+          />
+
+          <!-- 支付截图：仅线下支付展示，必传至少1张 -->
+          <template v-if="payForm.payType === 'OFFLINE'">
+            <view class="popup-label">
+              支付截图
+              <text class="required-star">*</text>
+            </view>
+            <ImgUpload
+              v-model="payFileUrlList"
+              category="WJ_CONTRACT_ORDER_PAY_IMG"
+              :limit="3"
+              @update:fileId="onPayFileUploaded"
+            />
+          </template>
+        </view>
+        <view class="popup-footer">
+          <button class="btn-cancel" @click="closePayConfirm">取消</button>
+          <button
+            class="btn-submit"
+            :disabled="paySubmitting"
+            @click="confirmPay"
+          >
+            {{ paySubmitting ? "提交中..." : "确定" }}
+          </button>
+        </view>
+      </view>
+    </wd-popup>
+
     <!-- 支付码弹窗 -->
     <wd-popup
       v-model="payPopupShow"
@@ -204,17 +273,18 @@
 </template>
 
 <script setup>
-import { ref, nextTick, computed } from "vue";
+import { ref, nextTick, computed, watch } from "vue";
 import { getElementHeight } from "@/utils/tools";
 import { onLoad, onShow } from "@dcloudio/uni-app";
 import {
   getContractOrderPage,
   deleteContractOrder,
   generateContractOrderFromContract,
-  createContractOrderPay,
+  confirmContractOrderPay,
   syncContractOrderServiceExpire,
 } from "@/api";
 import { useDict } from "@/hooks/useDict";
+import ImgUpload from "@/components/ImgUpload.vue";
 
 const { dictMap, getDictLabel } = useDict();
 
@@ -381,21 +451,84 @@ function onGenerateFromContract() {
   });
 }
 
-// 生成支付码
+// ========== 确认支付 ==========
+const payConfirmShow = ref(false);
+const paySubmitting = ref(false);
+const currentPayItem = ref(null);
+const payForm = ref({ actualAmount: "", payType: "ONLINE", remark: "" });
+// 线下支付截图：URL 列表用于展示，fileId 列表用于提交（按下标对齐）
+const payFileUrlList = ref([]);
+const payFileIdList = ref([]);
+
+// 打开确认支付弹窗
 function openPay(item) {
-  createContractOrderPay({ orderId: item.id })
-    .then((data) => {
-      if (typeof data === "string") {
-        payCodeText.value = data;
-      } else if (data) {
-        payCodeText.value =
-          data.payCode || data.payUrl || data.code || JSON.stringify(data);
-      } else {
-        payCodeText.value = "";
-      }
+  currentPayItem.value = item;
+  payForm.value = { actualAmount: "", payType: "ONLINE", remark: "" };
+  payFileUrlList.value = [];
+  payFileIdList.value = [];
+  payConfirmShow.value = true;
+}
+
+function closePayConfirm() {
+  payConfirmShow.value = false;
+}
+
+// 上传成功记录 fileId（与 URL 列表追加顺序一致）
+function onPayFileUploaded(fileId) {
+  if (fileId) payFileIdList.value.push(fileId);
+}
+
+// 截图被删除时同步移除对应下标的 fileId
+watch(payFileUrlList, (val, oldVal) => {
+  if (val.length < oldVal.length) {
+    const removed = oldVal.find((u) => !val.includes(u));
+    const idx = oldVal.indexOf(removed);
+    if (idx !== -1) payFileIdList.value.splice(idx, 1);
+  }
+});
+
+// 提交确认支付
+async function confirmPay() {
+  if (paySubmitting.value) return;
+  const { actualAmount, payType, remark } = payForm.value;
+
+  // 实付金额填了必须大于0
+  if (actualAmount !== "" && Number(actualAmount) <= 0) {
+    return uni.showToast({ title: "实付金额必须大于0", icon: "none" });
+  }
+  // 线下支付必传截图
+  if (payType === "OFFLINE" && payFileIdList.value.length === 0) {
+    return uni.showToast({ title: "请上传支付截图", icon: "none" });
+  }
+
+  const payload = {
+    orderId: currentPayItem.value.id,
+    payType,
+    actualAmount: actualAmount !== "" ? Number(actualAmount) : undefined,
+    remark: remark || undefined,
+    payFileIdList:
+      payType === "OFFLINE" ? payFileIdList.value : undefined,
+  };
+
+  paySubmitting.value = true;
+  try {
+    const res = await confirmContractOrderPay(payload);
+    if (payType === "ONLINE") {
+      // 线上：拿到支付链接展示二维码
+      payCodeText.value = res?.payUrl || "";
+      payConfirmShow.value = false;
       payPopupShow.value = true;
-    })
-    .catch(() => {});
+    } else {
+      // 线下：直接支付成功，刷新列表
+      uni.showToast({ title: "支付成功", icon: "success" });
+      payConfirmShow.value = false;
+      fetchList(true);
+    }
+  } catch (error) {
+    console.error("确认支付失败", error);
+  } finally {
+    paySubmitting.value = false;
+  }
 }
 
 // 复制支付码
@@ -620,6 +753,94 @@ onLoad(async (op) => {
       width: 100%;
       height: 80rpx;
       border-radius: 12rpx;
+    }
+  }
+}
+
+/* 确认支付弹窗 */
+.pay-confirm-popup {
+  padding: 32rpx;
+  background-color: #ffffff;
+
+  .popup-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 32rpx;
+
+    .popup-title {
+      font-size: 32rpx;
+      font-weight: 600;
+      color: #333;
+    }
+  }
+
+  .popup-body {
+    margin-bottom: 32rpx;
+
+    .popup-label {
+      font-size: 28rpx;
+      color: #666;
+      margin-bottom: 16rpx;
+      margin-top: 24rpx;
+
+      &:first-child {
+        margin-top: 0;
+      }
+
+      .required-star {
+        color: #ee0a24;
+        margin-left: 4rpx;
+      }
+    }
+
+    .popup-input {
+      background-color: #f8f9fa;
+      border-radius: 12rpx;
+      padding: 16rpx 24rpx;
+      font-size: 28rpx;
+      min-height: 48rpx;
+    }
+
+    .placeholder-style {
+      color: #969799;
+    }
+  }
+
+  .popup-footer {
+    display: flex;
+    gap: 24rpx;
+
+    .btn-cancel {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 40px;
+      line-height: 1;
+      background-color: #f5f5f5;
+      color: #666;
+      font-size: 12px;
+      border-radius: 40rpx;
+      border: none;
+    }
+
+    .btn-submit {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 40px;
+      line-height: 1;
+      background-color: #0066ff;
+      color: #ffffff;
+      font-size: 12px;
+      border-radius: 40rpx;
+      border: none;
+
+      &:disabled {
+        opacity: 0.6;
+      }
     }
   }
 }

@@ -37,7 +37,17 @@ export function createContractOrderPay(data) {
   return post("/wjapp/wjMobile/contractOrder/createPay", data);
 }
 
+// 合同订单确认支付（payType: ONLINE-线上 OFFLINE-线下；线下必传 payFileIdList）
+export function confirmContractOrderPay(data) {
+  return post("/wjapp/wjMobile/contractOrder/confirmPay", data);
+}
+
 // 手动同步服务到期时间
 export function syncContractOrderServiceExpire(data) {
   return post("/wjapp/wjMobile/contractOrder/syncServiceExpire", data);
+}
+
+// 物品选择器列表（订单产品明细）
+export function getGoodsList(data) {
+  return get("/wjapp/wjMobile/goods/list", data);
 }

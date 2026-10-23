@@ -127,7 +127,6 @@
           </div>
           <div
             v-if="
-              item.status === 'DELIVERED' &&
               item.needReturnDevice === '1' &&
               item.returnStatus === 'NOT_RETURNED'
             "
