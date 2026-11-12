@@ -60,6 +60,14 @@ export function getContractSignCustomerSilentAuthUrl(data) {
 export function contractSignInitiate(data) {
   return post("/wjapp/wjMobile/contractSign/initiate", data);
 }
+// 移动端电签己方主体列表（多主体）
+export function getContractSignCorpSubjectList(data) {
+  return get("/wjapp/wjMobile/contractSign/corpSubjectList", data);
+}
+// 移动端己方主体静默签授权链接
+export function getContractSignCorpSilentAuthUrl(data) {
+  return get("/wjapp/wjMobile/contractSign/corpSilentAuthUrl", data);
+}
 // 移动端合同签署记录分页
 export function getContractSignPage(data) {
   return get("/wjapp/wjMobile/contractSign/page", data);
@@ -71,5 +79,9 @@ export function contractSignVoid(data) {
 // 移动端催签合同电签
 export function contractSignUrge(data) {
   return post("/wjapp/wjMobile/contractSign/urge", data);
+}
+// 移动端追加合同附件（返回保存后的完整附件数组）
+export function addContractAttachment(data) {
+  return post("/wjapp/wjMobile/contract/attachment/add", data);
 }
 //checkInRange

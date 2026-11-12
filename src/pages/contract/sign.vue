@@ -15,6 +15,25 @@
     </view>
 
     <view class="sign-body">
+      <!-- 签署主体（多主体，默认选中后端默认主体） -->
+      <view class="form-item" v-if="subjectList.length > 0">
+        <view class="form-lbl">签署主体</view>
+        <view class="subject-row">
+          <view
+            v-for="s in subjectList"
+            :key="s.subjectCode"
+            class="subject-chip"
+            :class="{ active: corpSubjectCode === s.subjectCode }"
+            @click="onSubjectChange(s.subjectCode)"
+          >
+            <text>{{ s.subjectName }}</text>
+            <text v-if="s.silentAuthorized !== '1'" class="subject-badge"
+              >未授权静默签</text
+            >
+          </view>
+        </view>
+      </view>
+
       <!-- 认证状态提示条 -->
       <view
         class="auth-alert"
@@ -93,38 +112,39 @@
 
       <!-- 电签信息 -->
       <view class="divider">电签信息</view>
-      <view class="form-item">
-        <view class="form-lbl">客户用章人</view>
+      <!-- customerId 由合同详情异步返回，就绪前不挂载选择器（组件首次加载后即缓存选项，不会重拉） -->
+      <view class="form-item" v-if="customerId">
+        <view class="form-lbl">客户联系人</view>
         <ApiSelectPicker
           v-model="selectedContactId"
           :api="fetchContacts"
           label-key="contactName"
           value-key="id"
-          title="选择客户用章人"
-          placeholder="请选择客户用章人"
+          title="选择客户联系人"
+          placeholder="请选择客户联系人"
           @confirm="onContactConfirm"
         />
       </view>
       <view class="form-item">
         <view class="form-lbl">
-          客户用章人手机号
+          客户联系人手机号
           <text class="red">*</text>
         </view>
         <input
           v-model="signForm.signerMobile"
           class="form-input"
           type="number"
-          placeholder="请输入客户用章人手机号"
+          placeholder="请输入客户联系人手机号"
           maxlength="11"
         />
       </view>
       <view class="form-item">
-        <view class="form-lbl">客户用章人姓名</view>
+        <view class="form-lbl">客户联系人姓名</view>
         <input
           v-model="signForm.signerName"
           class="form-input"
           type="text"
-          placeholder="请输入客户用章人姓名（选填）"
+          placeholder="请输入客户联系人姓名（选填）"
         />
       </view>
       <view class="form-item">
@@ -159,13 +179,42 @@
       >
     </view>
 
-    <!-- 发起成功弹窗 -->
+    <!-- 发起结果弹窗 -->
     <wd-popup
       v-model="resultShow"
       position="center"
       custom-style="width: 86%; border-radius: 24rpx; padding: 40rpx 32rpx;"
     >
-      <view class="result-popup">
+      <!-- 己方主体未完成静默签授权：展示授权链接，授权后按原参数重新发起 -->
+      <view v-if="needCorpSilentAuth" class="result-popup">
+        <view class="popup-title">主体静默签授权</view>
+        <view class="auth-need-tip">
+          当前主体「{{
+            currentSubjectName
+          }}」尚未完成己方静默签授权，请复制下方链接完成授权后重新发起。
+        </view>
+        <view v-if="corpAuthUrl" class="result-url-box">
+          <view class="result-lbl">授权链接（点击复制）</view>
+          <view class="result-url" @click="copyText(corpAuthUrl)">
+            <text class="result-url-text">{{ corpAuthUrl }}</text>
+            <wd-button size="small" type="primary">复制</wd-button>
+          </view>
+        </view>
+        <view class="popup-footer">
+          <wd-button class="footer-btn" plain @click="resultShow = false"
+            >取消</wd-button
+          >
+          <wd-button
+            class="footer-btn"
+            type="primary"
+            :loading="initiating"
+            @click="onSignSubmit"
+            >已完成授权，重新发起</wd-button
+          >
+        </view>
+      </view>
+      <!-- 发起成功 -->
+      <view v-else class="result-popup">
         <view class="popup-title">电签发起成功</view>
         <view v-if="signResult.signUrl" class="result-url-box">
           <view class="result-lbl">签署链接（点击复制）</view>
@@ -193,6 +242,8 @@ import {
   getCustomerDetail,
   getContractSignCustomerAuthCheck,
   getContractSignCustomerAuthUrl,
+  getContractSignCorpSubjectList,
+  getContractSignCorpSilentAuthUrl,
   contractSignInitiate,
 } from "@/api";
 import { useDict } from "@/hooks/useDict";
@@ -224,6 +275,20 @@ const signForm = ref({
   forceManualSign: false,
 });
 
+// 签署主体（多主体电签）
+const subjectList = ref([]);
+const corpSubjectCode = ref("");
+// 己方主体静默签授权
+const needCorpSilentAuth = ref(false);
+const corpAuthUrl = ref("");
+
+const currentSubjectName = computed(() => {
+  const cur = subjectList.value.find(
+    (s) => s.subjectCode === corpSubjectCode.value,
+  );
+  return cur?.subjectName || "";
+});
+
 // authStatus：UNAUTH-未认证 AUTHING-认证中 AUTHED-已认证
 const authStatusLabel = computed(() => {
   if (!authStatus.value) return "";
@@ -239,12 +304,40 @@ const isAuthed = (data) => {
   return data.authStatus === "AUTHED";
 };
 
-onLoad(() => {
+onLoad(async () => {
   const options = uni.$router.query || {};
   contractId.value = options.id || "";
   contractName.value = decodeURIComponent(options.name || "");
+  // 先加载主体列表确定默认主体，后续认证检查/发起都按当前主体传参
+  await loadSubjects();
   loadContract();
 });
+
+// 加载己方主体列表，默认选中后端默认主体（defaultSubject=1）
+async function loadSubjects() {
+  try {
+    const list = await getContractSignCorpSubjectList({});
+    subjectList.value = Array.isArray(list) ? list : [];
+    const def =
+      subjectList.value.find((s) => s.defaultSubject === "1") ||
+      subjectList.value[0];
+    corpSubjectCode.value = def?.subjectCode || "";
+  } catch (e) {
+    subjectList.value = [];
+  }
+}
+
+// 切换主体：清空已获取的认证链接，按当前主体重新查询认证状态
+function onSubjectChange(code) {
+  if (!code || code === corpSubjectCode.value) return;
+  corpSubjectCode.value = code;
+  authUrl.value = "";
+  authH5Url.value = "";
+  authPcUrl.value = "";
+  needCorpSilentAuth.value = false;
+  corpAuthUrl.value = "";
+  checkAuth();
+}
 
 // 拉取合同详情，回填客户 ID 与合同文件 ID（对齐 PC 逻辑）
 function loadContract() {
@@ -278,7 +371,7 @@ function fetchContacts() {
   );
 }
 
-// 选中联系人后回填用章人手机号与姓名
+// 选中联系人后回填联系人手机号与姓名
 function onContactConfirm(item) {
   if (!item?.contactPhone) {
     uni.showToast({ title: "该联系人未填写手机号", icon: "none" });
@@ -295,7 +388,10 @@ function checkAuth() {
     uni.showToast({ title: "该合同未关联客户，无法发起电签", icon: "none" });
     return;
   }
-  getContractSignCustomerAuthCheck({ storeId })
+  getContractSignCustomerAuthCheck({
+    storeId,
+    corpSubjectCode: corpSubjectCode.value,
+  })
     .then((data) => {
       authed.value = isAuthed(data);
       if (data && typeof data === "object") {
@@ -314,6 +410,7 @@ function getAuthUrl() {
   getContractSignCustomerAuthUrl({
     mobile: authMobile.value,
     storeId: customerId.value,
+    corpSubjectCode: corpSubjectCode.value,
   })
     .then((data) => {
       if (typeof data === "string") {
@@ -347,7 +444,7 @@ function copyText(text) {
 
 function onSignSubmit() {
   if (!signForm.value.signerMobile) {
-    uni.showToast({ title: "请输入客户用章人手机号", icon: "none" });
+    uni.showToast({ title: "请输入客户联系人手机号", icon: "none" });
     return;
   }
   initiating.value = true;
@@ -359,14 +456,41 @@ function onSignSubmit() {
     signerName: signForm.value.signerName,
     signMode: signForm.value.signMode,
     forceManualSign: signForm.value.forceManualSign,
+    corpSubjectCode: corpSubjectCode.value,
   })
     .then((data) => {
+      // 己方主体未完成静默签授权：展示授权链接，授权完成后按原参数重新发起
+      if (data?.corpSilentAuthNeed === "1") {
+        needCorpSilentAuth.value = true;
+        corpAuthUrl.value =
+          data.corpSilentAuthH5Url || data.corpSilentAuthPcUrl || "";
+        if (!corpAuthUrl.value) {
+          fetchCorpSilentAuthUrl();
+        }
+        resultShow.value = true;
+        return;
+      }
+      needCorpSilentAuth.value = false;
       signResult.value = data || {};
       resultShow.value = true;
     })
     .finally(() => {
       initiating.value = false;
     });
+}
+
+// 兜底：发起未返回授权链接时，按当前主体主动拉取
+function fetchCorpSilentAuthUrl() {
+  getContractSignCorpSilentAuthUrl({ corpSubjectCode: corpSubjectCode.value })
+    .then((data) => {
+      corpAuthUrl.value =
+        (typeof data === "string" ? data : "") ||
+        data?.h5Url ||
+        data?.corpSilentAuthH5Url ||
+        data?.url ||
+        "";
+    })
+    .catch(() => {});
 }
 
 // 成功弹窗点击完成，返回列表并刷新
@@ -571,6 +695,36 @@ function goBack() {
   }
 }
 
+/* 签署主体选择 */
+.subject-row {
+  display: flex;
+  gap: 16rpx;
+  flex-wrap: wrap;
+  .subject-chip {
+    display: flex;
+    align-items: center;
+    gap: 10rpx;
+    background-color: #ffffff;
+    border: 1rpx solid #ddd;
+    border-radius: 12rpx;
+    padding: 16rpx 28rpx;
+    font-size: 28rpx;
+    color: #333;
+    &.active {
+      border-color: #0066ff;
+      color: #0066ff;
+      background-color: #f2f6ff;
+    }
+    .subject-badge {
+      font-size: 20rpx;
+      color: #fa9a2f;
+      background-color: #fff7e8;
+      border-radius: 6rpx;
+      padding: 2rpx 10rpx;
+    }
+  }
+}
+
 /* 强制手动签开关行 */
 .switch-row {
   flex-direction: row;
@@ -604,7 +758,7 @@ function goBack() {
   padding: 20rpx 32rpx calc(20rpx + env(safe-area-inset-bottom));
   background-color: #ffffff;
   box-shadow: 0 -4rpx 16rpx rgba(0, 0, 0, 0.04);
-  z-index: 10;
+  z-index: 1;
   .footer-btn {
     flex: 1;
     :deep(.wd-button) {
@@ -623,6 +777,15 @@ function goBack() {
     color: #333;
     text-align: center;
     margin-bottom: 32rpx;
+  }
+  .auth-need-tip {
+    font-size: 26rpx;
+    color: #8a5300;
+    background-color: #fff7e8;
+    border-radius: 12rpx;
+    padding: 20rpx 24rpx;
+    margin-bottom: 24rpx;
+    line-height: 1.5;
   }
   .result-lbl {
     font-size: 26rpx;
@@ -652,7 +815,10 @@ function goBack() {
   }
   .popup-footer {
     margin-top: 40rpx;
+    display: flex;
+    gap: 20rpx;
     .footer-btn {
+      flex: 1;
       :deep(.wd-button) {
         width: 100%;
         height: 80rpx;

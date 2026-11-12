@@ -18,7 +18,21 @@
           <text class="status-desc">{{ statusDesc }}</text>
         </view>
       </view>
-
+	 <view class="info-card">
+        <view class="card-title">基本信息</view>
+        <view class="info-row">
+          <text class="label">客户</text>
+          <text class="value">{{ detail.customerName || "-" }}</text>
+        </view>
+        <!-- <view class="info-row">
+          <text class="label">关联施工</text>
+          <text class="value">{{ detail.constructionTaskId || "-" }}</text>
+        </view> -->
+        <view class="info-row">
+          <text class="label">PubwinId</text>
+          <text class="value">{{ detail.pubwinId || "无" }}</text>
+        </view>
+      </view>
       <!-- 发货信息卡片 -->
       <view class="info-card">
         <view class="card-title">发货信息</view>
@@ -35,6 +49,7 @@
           <text class="value">{{ detail.remark || "无" }}</text>
         </view>
       </view>
+
 
       <!-- 签收信息卡片 -->
       <view class="info-card">

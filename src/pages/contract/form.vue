@@ -208,18 +208,71 @@
         <view v-if="signedFileUrl" class="field-block">
           <view class="field-lbl">签署文件</view>
           <view class="sign-file-box">
-            <view class="sign-file-url" @click="openSignFile">
+            <view class="sign-file-url" @click="openFileUrl(signedFileUrl)">
               <text class="sign-file-text">{{ signedFileUrl }}</text>
             </view>
             <view class="sign-file-actions">
-              <wd-button size="small" plain @click="copySignFile"
+              <wd-button size="small" plain @click="copyFileUrl(signedFileUrl)"
                 >复制链接</wd-button
               >
-              <wd-button size="small" type="primary" @click="openSignFile"
+              <wd-button
+                size="small"
+                type="primary"
+                @click="openFileUrl(signedFileUrl)"
                 >打开</wd-button
               >
             </view>
           </view>
+        </view>
+
+        <!-- 合同附件（详情模式：回显 + 追加，各状态合同均可补传） -->
+        <view v-if="viewMode && contractId" class="field-block">
+          <view class="field-lbl">合同附件</view>
+          <view v-if="attachmentList.length > 0" class="attach-list">
+            <view
+              v-for="att in attachmentList"
+              :key="att.fileId"
+              class="attach-row"
+            >
+              <wd-icon name="file" size="16px" color="#0066ff" />
+              <text class="attach-name" @click="openFileUrl(att.fileUrl)">{{
+                att.fileName
+              }}</text>
+              <text class="attach-copy" @click="copyFileUrl(att.fileUrl)"
+                >复制</text
+              >
+            </view>
+          </view>
+          <view v-else class="attach-empty">暂无附件</view>
+          <ImgUpload
+            v-model="pendingAttachmentUrls"
+            category="WJ_CONTRACT_FILE"
+            :limit="9"
+            accept="all"
+            :extension="[
+              '.pdf',
+              '.doc',
+              '.docx',
+              '.xls',
+              '.xlsx',
+              '.jpg',
+              '.jpeg',
+              '.png',
+            ]"
+            :size-limit="10"
+            @extraData="onAttachmentExtra"
+          />
+          <wd-button
+            v-if="pendingFileIdList.length > 0"
+            size="small"
+            type="primary"
+            :loading="attachSaving"
+            @click="submitAttachments"
+            >追加附件（{{ pendingFileIdList.length }}）</wd-button
+          >
+          <text class="upload-tip"
+            >附件仅作资料留存，不参与电签，不改变合同状态。</text
+          >
         </view>
 
         <!-- 备注 -->
@@ -289,7 +342,7 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import {
   addContract,
   editContract,
@@ -297,10 +350,12 @@ import {
   getNextContractNo,
   getOutworkPage,
   getOutworkDetail,
+  addContractAttachment,
 } from "@/api";
 import ImgUpload from "@/components/ImgUpload.vue";
 import DictSelectPicker from "@/components/DictSelectPicker.vue";
 import ApiSelectPicker from "@/components/ApiSelectPicker.vue";
+import { extractFileIdFromUrl } from "@/utils/tools";
 import { onLoad } from "@dcloudio/uni-app";
 
 const navTitle = ref("创建合同");
@@ -332,6 +387,20 @@ const paperFileUrlList = ref([]);
 // 电签签署文件链接（详情中已签署时展示）
 const signedFileUrl = ref("");
 const submitLoading = ref(false);
+
+// 合同附件（详情回显 + 追加）
+const attachmentList = ref([]);
+// 待追加附件的上传队列（ImgUpload 展示用 URL 列表）
+const pendingAttachmentUrls = ref([]);
+// 待追加附件 { url, fileId } 映射，用于按上传队列还原 fileId
+const pendingFileList = ref([]);
+const attachSaving = ref(false);
+// 待追加的 fileId 列表：按当前上传队列过滤，队列中移除的文件不再提交
+const pendingFileIdList = computed(() =>
+  pendingAttachmentUrls.value
+    .map((url) => pendingFileList.value.find((f) => f.url === url)?.fileId)
+    .filter(Boolean),
+);
 
 // 日期选择
 const datePickerShow = ref(false);
@@ -427,39 +496,69 @@ async function loadContractDetail(id) {
     paperFileUrlList.value = contract.paperFileUrlList || [];
     // 回显电签签署文件链接
     signedFileUrl.value = contract.signedFileUrl || "";
+    // 回显合同附件列表
+    attachmentList.value = contract.attachmentList || [];
   } catch (e) {
     uni.showToast({ title: "合同详情加载失败", icon: "none" });
   }
 }
 
-// 复制签署文件链接
-function copySignFile() {
-  if (!signedFileUrl.value) return;
+// 复制文件链接
+function copyFileUrl(url) {
+  if (!url) return;
   uni.setClipboardData({
-    data: signedFileUrl.value,
+    data: url,
     success: () => {
-      uni.showToast({ title: "已复制签署链接", icon: "none" });
+      uni.showToast({ title: "已复制链接", icon: "none" });
     },
   });
 }
 
-// 打开签署文件链接：H5/App 直接打开，小程序复制后提示浏览器打开
-function openSignFile() {
-  if (!signedFileUrl.value) return;
+// 打开文件链接：H5/App 直接打开，小程序复制后提示浏览器打开
+function openFileUrl(url) {
+  if (!url) return;
   // #ifdef H5
-  window.open(signedFileUrl.value, "_blank");
+  window.open(url, "_blank");
   // #endif
   // #ifdef APP-PLUS
-  plus.runtime.openURL(signedFileUrl.value);
+  plus.runtime.openURL(url);
   // #endif
   // #ifndef H5 || APP-PLUS
   uni.setClipboardData({
-    data: signedFileUrl.value,
+    data: url,
     success: () => {
       uni.showToast({ title: "链接已复制，请在浏览器中打开", icon: "none" });
     },
   });
   // #endif
+}
+
+// 附件上传成功：记录 url -> fileId 映射（提交时按上传队列过滤）
+function onAttachmentExtra(res) {
+  const url = res?.url || "";
+  const fileId = res?.id || res?.fileId || extractFileIdFromUrl(url);
+  if (!url || !fileId) return;
+  if (pendingFileList.value.some((f) => f.url === url)) return;
+  pendingFileList.value = [...pendingFileList.value, { url, fileId }];
+}
+
+// 追加附件：提交后由接口返回完整附件数组整体刷新
+function submitAttachments() {
+  if (pendingFileIdList.value.length === 0) return;
+  attachSaving.value = true;
+  addContractAttachment({
+    contractId: contractId.value,
+    fileIdList: pendingFileIdList.value,
+  })
+    .then((list) => {
+      attachmentList.value = Array.isArray(list) ? list : [];
+      pendingAttachmentUrls.value = [];
+      pendingFileList.value = [];
+      uni.showToast({ title: "附件追加成功", icon: "success" });
+    })
+    .finally(() => {
+      attachSaving.value = false;
+    });
 }
 
 function goBack() {
@@ -714,6 +813,41 @@ function submitForm(saveAction = "DRAFT") {
     gap: 16rpx;
     margin-top: 16rpx;
   }
+}
+
+/* 合同附件列表 */
+.attach-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+  margin-bottom: 16rpx;
+  .attach-row {
+    display: flex;
+    align-items: center;
+    gap: 12rpx;
+    background-color: #f7f8fa;
+    border-radius: 12rpx;
+    padding: 16rpx 20rpx;
+    .attach-name {
+      flex: 1;
+      font-size: 26rpx;
+      color: #0066ff;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
+    }
+    .attach-copy {
+      flex-shrink: 0;
+      font-size: 24rpx;
+      color: #0066ff;
+    }
+  }
+}
+.attach-empty {
+  font-size: 26rpx;
+  color: #999;
+  margin-bottom: 16rpx;
 }
 
 /* 蓝底状态告知提示条 */

@@ -49,6 +49,12 @@
             }}</text>
           </view>
         </view>
+        <view class="card-grid">
+          <view class="grid-item">
+            <text class="label">签署主体</text>
+            <text class="value">{{ item.corpSubjectName || "-" }}</text>
+          </view>
+        </view>
 
         <!-- 底部操作按钮 -->
         <view class="card-actions" v-if="item.status !== 'COMPLETED'">

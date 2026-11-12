@@ -56,16 +56,17 @@
             class="dot"
             :class="`status-dot-${getStatusClass(item.status)}`"
           ></view>
-          <text class="customer-name">{{ item.receiverName || "-" }}</text>
+          <text class="customer-name">{{ item.customerName || "-" }}</text>
         </view>
 
         <!-- 收货信息 -->
         <view class="info-row">
           <view class="field-label label-with-copy">
-            <text>收货地址</text>
-            <view class="copy-btn" @click="handleCopyReceiverInfo(item)">
-              <wd-icon name="copy" size="30rpx" color="#2979ff" />
-            </view>
+          
+			<text>收货地址</text>
+			<view class="copy-btn" @click="handleCopyReceiverInfo(item)">
+			  <wd-icon name="copy" size="30rpx" color="#2979ff" />
+			</view>
           </view>
           <view class="field-value address-value">{{
             item.receiverAddress || "暂无地址"
@@ -77,9 +78,13 @@
             <view class="field-value">{{ item.receiverName || "-" }}</view>
           </view>
           <view class="info-cell">
-            <view class="field-label">联系电话</view>
+            <view class="field-label" >联系电话</view>
             <view class="field-value">{{ item.receiverPhone || "-" }}</view>
           </view>
+		  <view class="info-cell">
+		    <view class="field-label" >PubwinId</view>
+		    <view class="field-value"  >{{ item.pubwinId || "-" }}</view>
+		  </view>
         </view>
 
         <!-- 发货清单简要 -->
@@ -886,7 +891,7 @@ onShow(async () => {
 .grid-info-row {
   display: flex;
   margin-bottom: 24rpx;
-
+	justify-content: space-between;
   .info-cell {
     flex: 1;
   }
